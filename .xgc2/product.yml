@@ -1,7 +1,7 @@
 schema: xgc2.product.v1
 id: xgc2-gazebo-sim-vrpn-bridge
 name: XGC2 Gazebo Sim VRPN Bridge
-version: 1.1.0-19
+version: 1.1.0-20
 kind: ros1-apt
 summary: Gazebo Classic model pose to VRPN tracker server bridge.
 ros:
@@ -40,4 +40,4 @@ release:
   dependency_policy:
     libxgc2-math-dev: rebuild
   apt_versions:
-    focal: 1.1.0-19
+    focal: 1.1.0-20
