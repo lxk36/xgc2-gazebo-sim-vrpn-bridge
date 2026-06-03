@@ -52,8 +52,10 @@ install(DIRECTORY include/${PROJECT_NAME}/
 )
 
 if(CATKIN_ENABLE_TESTING)
+  find_package(rostest REQUIRED)
   catkin_add_gtest(gazebo_sim_vrpn_bridge_mocap_noise_tests test/mocap_noise_tests.cpp)
   if(TARGET gazebo_sim_vrpn_bridge_mocap_noise_tests)
     target_link_libraries(gazebo_sim_vrpn_bridge_mocap_noise_tests ${catkin_LIBRARIES})
   endif()
+  add_rostest(test/vrpn_protocol_e2e.test DEPENDENCIES gazebo_vrpn_server_node)
 endif()

@@ -17,5 +17,9 @@
   <depend>vrpn</depend>
   <exec_depend>vrpn_client_ros</exec_depend>
 
+  <test_depend>rostest</test_depend>
+  <test_depend>rosunit</test_depend>
+  <test_depend>rospy</test_depend>
+
   <export/>
 </package>

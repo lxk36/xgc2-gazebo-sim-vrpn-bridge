@@ -1,0 +1,67 @@
+<launch>
+  <node pkg="gazebo_sim_vrpn_bridge"
+        type="gazebo_vrpn_server_node"
+        name="gazebo_vrpn_server"
+        output="screen">
+    <param name="model_states_topic" value="/test/gazebo/model_states"/>
+    <param name="port" value="3983"/>
+    <param name="publish_rate" value="120.0"/>
+    <param name="scan_interval" value="0.05"/>
+    <param name="stale_timeout" value="2.0"/>
+    <param name="auto_track_known_models" value="false"/>
+    <rosparam param="manual_mapping">
+      gazebo_uav_alpha: uav1
+      gazebo_uav_beta: uav2
+      gazebo_ugv_alpha: ugv1
+    </rosparam>
+    <rosparam param="mocap_noise">
+      enabled: true
+      position_stddev_xyz: [1.0e-7, 1.0e-7, 1.0e-7]
+      rotation_stddev_rpy: [0.0, 0.0, 0.0]
+      seed: 11
+    </rosparam>
+  </node>
+
+  <group ns="client_a">
+    <node pkg="vrpn_client_ros"
+          type="vrpn_client_node"
+          name="vrpn_client_node"
+          output="screen">
+      <rosparam>
+        server: 127.0.0.1
+        port: 3983
+        update_frequency: 120.0
+        frame_id: world
+        use_server_time: false
+        broadcast_tf: false
+        refresh_tracker_frequency: 0.0
+        trackers:
+          - uav1
+      </rosparam>
+    </node>
+  </group>
+
+  <group ns="client_b">
+    <node pkg="vrpn_client_ros"
+          type="vrpn_client_node"
+          name="vrpn_client_node"
+          output="screen">
+      <rosparam>
+        server: 127.0.0.1
+        port: 3983
+        update_frequency: 120.0
+        frame_id: world
+        use_server_time: false
+        broadcast_tf: false
+        refresh_tracker_frequency: 0.0
+        trackers:
+          - ugv1
+      </rosparam>
+    </node>
+  </group>
+
+  <test test-name="gazebo_sim_vrpn_protocol_e2e"
+        pkg="gazebo_sim_vrpn_bridge"
+        type="vrpn_protocol_e2e.py"
+        time-limit="30"/>
+</launch>
