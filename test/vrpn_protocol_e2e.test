@@ -10,9 +10,26 @@
     <param name="stale_timeout" value="2.0"/>
     <param name="auto_track_known_models" value="false"/>
     <rosparam param="manual_mapping">
-      gazebo_uav_alpha: uav1
-      gazebo_uav_beta: uav2
-      gazebo_ugv_alpha: ugv1
+      gazebo_uav_01: uav1
+      gazebo_uav_02: uav2
+      gazebo_uav_03: uav3
+      gazebo_uav_04: uav4
+      gazebo_uav_05: uav5
+      gazebo_uav_06: uav6
+      gazebo_uav_07: uav7
+      gazebo_uav_08: uav8
+      gazebo_uav_09: uav9
+      gazebo_uav_10: uav10
+      gazebo_uav_11: uav11
+      gazebo_uav_12: uav12
+      gazebo_uav_13: uav13
+      gazebo_uav_14: uav14
+      gazebo_uav_15: uav15
+      gazebo_uav_16: uav16
+      gazebo_uav_17: uav17
+      gazebo_uav_18: uav18
+      gazebo_uav_19: uav19
+      gazebo_uav_20: uav20
     </rosparam>
     <rosparam param="mocap_noise">
       enabled: true
@@ -22,46 +39,29 @@
     </rosparam>
   </node>
 
-  <group ns="client_a">
-    <node pkg="vrpn_client_ros"
-          type="vrpn_client_node"
-          name="vrpn_client_node"
-          output="screen">
-      <rosparam>
-        server: 127.0.0.1
-        port: 3983
-        update_frequency: 120.0
-        frame_id: world
-        use_server_time: false
-        broadcast_tf: false
-        refresh_tracker_frequency: 0.0
-        trackers:
-          - uav1
-      </rosparam>
-    </node>
-  </group>
-
-  <group ns="client_b">
-    <node pkg="vrpn_client_ros"
-          type="vrpn_client_node"
-          name="vrpn_client_node"
-          output="screen">
-      <rosparam>
-        server: 127.0.0.1
-        port: 3983
-        update_frequency: 120.0
-        frame_id: world
-        use_server_time: false
-        broadcast_tf: false
-        refresh_tracker_frequency: 0.0
-        trackers:
-          - ugv1
-      </rosparam>
-    </node>
-  </group>
+  <group ns="client_01"><node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen"><rosparam>{server: 127.0.0.1, port: 3983, update_frequency: 120.0, frame_id: world, use_server_time: false, broadcast_tf: false, refresh_tracker_frequency: 0.0, trackers: [uav1]}</rosparam></node></group>
+  <group ns="client_02"><node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen"><rosparam>{server: 127.0.0.1, port: 3983, update_frequency: 120.0, frame_id: world, use_server_time: false, broadcast_tf: false, refresh_tracker_frequency: 0.0, trackers: [uav2]}</rosparam></node></group>
+  <group ns="client_03"><node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen"><rosparam>{server: 127.0.0.1, port: 3983, update_frequency: 120.0, frame_id: world, use_server_time: false, broadcast_tf: false, refresh_tracker_frequency: 0.0, trackers: [uav3]}</rosparam></node></group>
+  <group ns="client_04"><node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen"><rosparam>{server: 127.0.0.1, port: 3983, update_frequency: 120.0, frame_id: world, use_server_time: false, broadcast_tf: false, refresh_tracker_frequency: 0.0, trackers: [uav4]}</rosparam></node></group>
+  <group ns="client_05"><node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen"><rosparam>{server: 127.0.0.1, port: 3983, update_frequency: 120.0, frame_id: world, use_server_time: false, broadcast_tf: false, refresh_tracker_frequency: 0.0, trackers: [uav5]}</rosparam></node></group>
+  <group ns="client_06"><node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen"><rosparam>{server: 127.0.0.1, port: 3983, update_frequency: 120.0, frame_id: world, use_server_time: false, broadcast_tf: false, refresh_tracker_frequency: 0.0, trackers: [uav6]}</rosparam></node></group>
+  <group ns="client_07"><node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen"><rosparam>{server: 127.0.0.1, port: 3983, update_frequency: 120.0, frame_id: world, use_server_time: false, broadcast_tf: false, refresh_tracker_frequency: 0.0, trackers: [uav7]}</rosparam></node></group>
+  <group ns="client_08"><node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen"><rosparam>{server: 127.0.0.1, port: 3983, update_frequency: 120.0, frame_id: world, use_server_time: false, broadcast_tf: false, refresh_tracker_frequency: 0.0, trackers: [uav8]}</rosparam></node></group>
+  <group ns="client_09"><node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen"><rosparam>{server: 127.0.0.1, port: 3983, update_frequency: 120.0, frame_id: world, use_server_time: false, broadcast_tf: false, refresh_tracker_frequency: 0.0, trackers: [uav9]}</rosparam></node></group>
+  <group ns="client_10"><node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen"><rosparam>{server: 127.0.0.1, port: 3983, update_frequency: 120.0, frame_id: world, use_server_time: false, broadcast_tf: false, refresh_tracker_frequency: 0.0, trackers: [uav10]}</rosparam></node></group>
+  <group ns="client_11"><node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen"><rosparam>{server: 127.0.0.1, port: 3983, update_frequency: 120.0, frame_id: world, use_server_time: false, broadcast_tf: false, refresh_tracker_frequency: 0.0, trackers: [uav11]}</rosparam></node></group>
+  <group ns="client_12"><node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen"><rosparam>{server: 127.0.0.1, port: 3983, update_frequency: 120.0, frame_id: world, use_server_time: false, broadcast_tf: false, refresh_tracker_frequency: 0.0, trackers: [uav12]}</rosparam></node></group>
+  <group ns="client_13"><node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen"><rosparam>{server: 127.0.0.1, port: 3983, update_frequency: 120.0, frame_id: world, use_server_time: false, broadcast_tf: false, refresh_tracker_frequency: 0.0, trackers: [uav13]}</rosparam></node></group>
+  <group ns="client_14"><node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen"><rosparam>{server: 127.0.0.1, port: 3983, update_frequency: 120.0, frame_id: world, use_server_time: false, broadcast_tf: false, refresh_tracker_frequency: 0.0, trackers: [uav14]}</rosparam></node></group>
+  <group ns="client_15"><node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen"><rosparam>{server: 127.0.0.1, port: 3983, update_frequency: 120.0, frame_id: world, use_server_time: false, broadcast_tf: false, refresh_tracker_frequency: 0.0, trackers: [uav15]}</rosparam></node></group>
+  <group ns="client_16"><node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen"><rosparam>{server: 127.0.0.1, port: 3983, update_frequency: 120.0, frame_id: world, use_server_time: false, broadcast_tf: false, refresh_tracker_frequency: 0.0, trackers: [uav16]}</rosparam></node></group>
+  <group ns="client_17"><node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen"><rosparam>{server: 127.0.0.1, port: 3983, update_frequency: 120.0, frame_id: world, use_server_time: false, broadcast_tf: false, refresh_tracker_frequency: 0.0, trackers: [uav17]}</rosparam></node></group>
+  <group ns="client_18"><node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen"><rosparam>{server: 127.0.0.1, port: 3983, update_frequency: 120.0, frame_id: world, use_server_time: false, broadcast_tf: false, refresh_tracker_frequency: 0.0, trackers: [uav18]}</rosparam></node></group>
+  <group ns="client_19"><node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen"><rosparam>{server: 127.0.0.1, port: 3983, update_frequency: 120.0, frame_id: world, use_server_time: false, broadcast_tf: false, refresh_tracker_frequency: 0.0, trackers: [uav19]}</rosparam></node></group>
+  <group ns="client_20"><node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen"><rosparam>{server: 127.0.0.1, port: 3983, update_frequency: 120.0, frame_id: world, use_server_time: false, broadcast_tf: false, refresh_tracker_frequency: 0.0, trackers: [uav20]}</rosparam></node></group>
 
   <test test-name="gazebo_sim_vrpn_protocol_e2e"
         pkg="gazebo_sim_vrpn_bridge"
         type="vrpn_protocol_e2e.py"
-        time-limit="30"/>
+        time-limit="45"/>
 </launch>
