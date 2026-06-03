@@ -1,0 +1,72 @@
+# Gazebo-backed VRPN server defaults. Launch arguments can override these
+# top-level values; use this file mainly for robot-specific SE3 offsets.
+
+model_states_topic: /gazebo/model_states
+bind_address: ""
+port: 3883
+publish_rate: 120.0
+scan_interval: 2.0
+stale_timeout: 1.0
+velocity_filter_cutoff: 25.0
+acceleration_filter_cutoff: 25.0
+derivative_reset_timeout: 0.5
+match_mode: contains
+auto_track_known_models: false
+
+# Legacy tracker patterns are matched against Gazebo model names only during
+# low-rate scans. Prefer manual_mapping or auto_mapping for new launch files.
+trackers: []
+
+# New automatic mapping path. The server exports only Gazebo models matching
+# include_patterns, and uses the Gazebo model name as the VRPN tracker name.
+# vrpn_client_ros then creates /vrpn_client_node/<tracker>/pose, twist, accel.
+auto_mapping:
+  enabled: false
+  include_patterns:
+    - "^uav[0-9]+$"
+    - "^ugv[0-9]+$"
+    - "^tello[0-9]+$"
+
+# New manual mapping path. Keys are Gazebo model names; values are VRPN tracker
+# names. This overrides auto_mapping and keeps nonstandard Gazebo names usable.
+manual_mapping: {}
+# Example:
+# manual_mapping:
+#   iris_alpha: uav1
+#   scout_blue: ugv1
+
+# Fixed transform from Gazebo model/body frame B to simulated mocap rigid-body
+# frame M. The server publishes T_world_mocap = T_world_body * T_body_mocap.
+# Use meters and radians.
+default_body_to_tracker:
+  xyz: [0.0, 0.0, 0.0]
+  rpy: [0.0, 0.0, 0.0]
+
+# New per-tracker marker/body offset path. Keys are VRPN tracker names. The
+# fields accept translation/rotation_rpy or the legacy xyz/rpy spelling.
+extrinsics: {}
+# Example:
+# extrinsics:
+#   uav1:
+#     translation: [0.0, 0.0, 0.0]
+#     rotation_rpy: [0.0, 0.0, 0.0]
+
+# Optional per-tracker overrides. The key is the VRPN rigid body name.
+# gazebo_model_name is optional. Use it to map a Gazebo model such as "iris"
+# to a physical-system tracker name such as "uav1".
+robots: {}
+# Example PX4 SITL mapping:
+# robots:
+#   uav1:
+#     enabled: true
+#     gazebo_model_name: iris
+#     body_to_tracker:
+#       xyz: [0.0, 0.0, 0.0]
+#       rpy: [0.0, 0.0, 0.0]
+# Example marker offset:
+#   ugv2:
+#     enabled: true
+#     gazebo_model_name: ugv2
+#     body_to_tracker:
+#       xyz: [0.12, 0.0, 0.18]
+#       rpy: [0.0, 0.0, 0.0]

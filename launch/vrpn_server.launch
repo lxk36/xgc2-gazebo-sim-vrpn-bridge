@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="config" default="$(find gazebo_sim_vrpn_bridge)/config/vrpn_server.yaml"/>
+    <arg name="model_states_topic" default=""/>
+    <arg name="bind_address" default=""/>
+    <arg name="port" default=""/>
+    <arg name="publish_rate" default=""/>
+    <arg name="scan_interval" default=""/>
+    <arg name="stale_timeout" default=""/>
+    <arg name="velocity_filter_cutoff" default=""/>
+    <arg name="acceleration_filter_cutoff" default=""/>
+    <arg name="derivative_reset_timeout" default=""/>
+    <arg name="trackers" default=""/>
+    <arg name="match_mode" default=""/>
+    <arg name="auto_track_known_models" default=""/>
+
+    <node pkg="gazebo_sim_vrpn_bridge"
+          type="gazebo_vrpn_server_node"
+          name="gazebo_vrpn_server"
+          output="screen">
+        <rosparam file="$(arg config)" command="load"/>
+        <param if="$(eval arg('model_states_topic') != '')" name="model_states_topic" value="$(arg model_states_topic)"/>
+        <param if="$(eval arg('bind_address') != '')" name="bind_address" value="$(arg bind_address)"/>
+        <param if="$(eval arg('port') != '')" name="port" value="$(arg port)"/>
+        <param if="$(eval arg('publish_rate') != '')" name="publish_rate" value="$(arg publish_rate)"/>
+        <param if="$(eval arg('scan_interval') != '')" name="scan_interval" value="$(arg scan_interval)"/>
+        <param if="$(eval arg('stale_timeout') != '')" name="stale_timeout" value="$(arg stale_timeout)"/>
+        <param if="$(eval arg('velocity_filter_cutoff') != '')" name="velocity_filter_cutoff" value="$(arg velocity_filter_cutoff)"/>
+        <param if="$(eval arg('acceleration_filter_cutoff') != '')" name="acceleration_filter_cutoff" value="$(arg acceleration_filter_cutoff)"/>
+        <param if="$(eval arg('derivative_reset_timeout') != '')" name="derivative_reset_timeout" value="$(arg derivative_reset_timeout)"/>
+        <param if="$(eval arg('trackers') != '')" name="trackers" value="$(arg trackers)"/>
+        <param if="$(eval arg('match_mode') != '')" name="match_mode" value="$(arg match_mode)"/>
+        <param if="$(eval arg('auto_track_known_models') != '')" name="auto_track_known_models" value="$(arg auto_track_known_models)"/>
+    </node>
+</launch>

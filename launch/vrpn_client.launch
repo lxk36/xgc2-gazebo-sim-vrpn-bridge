@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="server" default="127.0.0.1"/>
+    <arg name="port" default="3883"/>
+    <arg name="trackers" default="[]"/>
+    <arg name="update_frequency" default="100.0"/>
+    <arg name="refresh_tracker_frequency" default="0.0"/>
+    <arg name="frame_id" default="world"/>
+    <arg name="use_server_time" default="false"/>
+    <arg name="broadcast_tf" default="true"/>
+
+    <node pkg="vrpn_client_ros"
+          type="vrpn_client_node"
+          name="vrpn_client_node"
+          output="screen">
+        <rosparam subst_value="true">
+            server: $(arg server)
+            port: $(arg port)
+            update_frequency: $(arg update_frequency)
+            frame_id: $(arg frame_id)
+            use_server_time: $(arg use_server_time)
+            broadcast_tf: $(arg broadcast_tf)
+            refresh_tracker_frequency: $(arg refresh_tracker_frequency)
+            trackers: $(arg trackers)
+        </rosparam>
+    </node>
+</launch>
