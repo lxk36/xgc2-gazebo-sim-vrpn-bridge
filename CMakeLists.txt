@@ -50,3 +50,10 @@ install(DIRECTORY config launch
 install(DIRECTORY include/${PROJECT_NAME}/
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 )
+
+if(CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(gazebo_sim_vrpn_bridge_mocap_noise_tests test/mocap_noise_tests.cpp)
+  if(TARGET gazebo_sim_vrpn_bridge_mocap_noise_tests)
+    target_link_libraries(gazebo_sim_vrpn_bridge_mocap_noise_tests ${catkin_LIBRARIES})
+  endif()
+endif()

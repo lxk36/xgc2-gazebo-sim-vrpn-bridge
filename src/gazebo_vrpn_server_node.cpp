@@ -26,6 +26,7 @@
 #include <xmlrpcpp/XmlRpcValue.h>
 
 #include "gazebo_sim_vrpn_bridge/butterworth_filter.h"
+#include "gazebo_sim_vrpn_bridge/mocap_noise.h"
 
 namespace gazebo_sim_vrpn_bridge {
 
@@ -58,10 +59,14 @@ public:
         nh_private_.param<double>("velocity_filter_cutoff", velocity_filter_cutoff_hz_, 25.0);
         nh_private_.param<double>("acceleration_filter_cutoff", acceleration_filter_cutoff_hz_, 25.0);
         nh_private_.param<double>("derivative_reset_timeout", derivative_reset_timeout_s_, 0.5);
+        nh_private_.param<bool>("mocap_noise_enabled", mocap_noise_config_.enabled, mocap_noise_config_.enabled);
+        nh_private_.param<int>("mocap_noise_seed", mocap_noise_seed_param_, static_cast<int>(mocap_noise_config_.seed));
         nh_private_.param<std::string>("match_mode", match_mode_, "contains");
         nh_private_.param<bool>("auto_track_known_models", auto_track_known_models_, false);
         loadConfig();
         validateConfig();
+        mocap_noise_config_.seed = mocap_noise_seed_param_ <= 0 ? 1 : static_cast<unsigned int>(mocap_noise_seed_param_);
+        mocap_noise_ = MocapNoise(mocap_noise_config_);
 
         connection_ = vrpn_create_server_connection(
             port_, nullptr, nullptr, bind_address_.empty() ? nullptr : bind_address_.c_str());
@@ -85,6 +90,16 @@ public:
         }
         if (!auto_track_known_models_) {
             ROS_INFO_STREAM("[GazeboVrpnServerNode] Auto export is disabled; configure trackers or robots");
+        }
+        if (mocap_noise_config_.enabled) {
+            ROS_INFO_STREAM("[GazeboVrpnServerNode] Mocap measurement noise enabled: position stddev xyz=["
+                            << mocap_noise_config_.position_stddev_m[0] << ", "
+                            << mocap_noise_config_.position_stddev_m[1] << ", "
+                            << mocap_noise_config_.position_stddev_m[2] << "] m, rotation stddev rpy=["
+                            << mocap_noise_config_.rotation_stddev_rad[0] << ", "
+                            << mocap_noise_config_.rotation_stddev_rad[1] << ", "
+                            << mocap_noise_config_.rotation_stddev_rad[2] << "] rad, seed="
+                            << mocap_noise_config_.seed);
         }
     }
 
@@ -244,16 +259,17 @@ private:
                                   model.gazebo_model_name.c_str(), age_s);
             }
 
+            const geometry_msgs::Pose measured_pose = mocap_noise_.apply(model.latest_pose);
             const vrpn_float64 position[3] = {
-                model.latest_pose.position.x,
-                model.latest_pose.position.y,
-                model.latest_pose.position.z,
+                measured_pose.position.x,
+                measured_pose.position.y,
+                measured_pose.position.z,
             };
             const vrpn_float64 quaternion[4] = {
-                model.latest_pose.orientation.x,
-                model.latest_pose.orientation.y,
-                model.latest_pose.orientation.z,
-                model.latest_pose.orientation.w,
+                measured_pose.orientation.x,
+                measured_pose.orientation.y,
+                measured_pose.orientation.z,
+                measured_pose.orientation.w,
             };
 
             const int status = model.tracker->report_pose(0, timestamp, position, quaternion);
@@ -573,6 +589,11 @@ private:
             default_body_to_tracker_ = parseTransform(default_transform, "default_body_to_tracker");
         }
 
+        XmlRpc::XmlRpcValue noise;
+        if (nh_private_.getParam("mocap_noise", noise)) {
+            parseMocapNoise(noise);
+        }
+
         XmlRpc::XmlRpcValue auto_mapping;
         if (nh_private_.getParam("auto_mapping", auto_mapping)) {
             parseAutoMapping(auto_mapping);
@@ -591,6 +612,28 @@ private:
         XmlRpc::XmlRpcValue extrinsics;
         if (nh_private_.getParam("extrinsics", extrinsics)) {
             parseExtrinsics(extrinsics);
+        }
+    }
+
+    void parseMocapNoise(XmlRpc::XmlRpcValue& noise) {
+        if (noise.getType() != XmlRpc::XmlRpcValue::TypeStruct) {
+            throw std::runtime_error("mocap_noise must be a YAML mapping");
+        }
+        if (noise.hasMember("enabled")) {
+            mocap_noise_config_.enabled = static_cast<bool>(noise["enabled"]);
+        }
+        if (noise.hasMember("position_stddev_xyz")) {
+            mocap_noise_config_.position_stddev_m =
+                toArray3(parseDoubleVector(noise["position_stddev_xyz"],
+                                           "mocap_noise.position_stddev_xyz", 3));
+        }
+        if (noise.hasMember("rotation_stddev_rpy")) {
+            mocap_noise_config_.rotation_stddev_rad =
+                toArray3(parseDoubleVector(noise["rotation_stddev_rpy"],
+                                           "mocap_noise.rotation_stddev_rpy", 3));
+        }
+        if (noise.hasMember("seed")) {
+            mocap_noise_seed_param_ = static_cast<int>(xmlRpcToDouble(noise["seed"], "mocap_noise.seed"));
         }
     }
 
@@ -781,6 +824,10 @@ private:
         return result;
     }
 
+    static std::array<double, 3> toArray3(const std::vector<double>& values) {
+        return {{values[0], values[1], values[2]}};
+    }
+
     static double xmlRpcToDouble(XmlRpc::XmlRpcValue& value,
                                  const std::string& param_name) {
         if (value.getType() == XmlRpc::XmlRpcValue::TypeInt) {
@@ -828,6 +875,7 @@ private:
     double velocity_filter_cutoff_hz_{25.0};
     double acceleration_filter_cutoff_hz_{25.0};
     double derivative_reset_timeout_s_{0.5};
+    int mocap_noise_seed_param_{1};
     std::string match_mode_{"contains"};
     bool auto_track_known_models_{false};
     std::vector<std::string> auto_include_patterns_;
@@ -835,6 +883,8 @@ private:
 
     vrpn_Connection* connection_{nullptr};
     tf2::Transform default_body_to_tracker_;
+    MocapNoiseConfig mocap_noise_config_;
+    MocapNoise mocap_noise_;
     std::vector<std::string> tracker_patterns_;
     std::map<std::string, RobotConfig> robot_configs_;
     std::map<std::string, std::string> configured_model_to_tracker_;

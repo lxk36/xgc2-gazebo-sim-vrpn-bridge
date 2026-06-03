@@ -10,6 +10,8 @@
     <arg name="velocity_filter_cutoff" default=""/>
     <arg name="acceleration_filter_cutoff" default=""/>
     <arg name="derivative_reset_timeout" default=""/>
+    <arg name="mocap_noise_enabled" default=""/>
+    <arg name="mocap_noise_seed" default=""/>
     <arg name="trackers" default=""/>
     <arg name="match_mode" default=""/>
     <arg name="auto_track_known_models" default=""/>
@@ -28,6 +30,8 @@
         <param if="$(eval arg('velocity_filter_cutoff') != '')" name="velocity_filter_cutoff" value="$(arg velocity_filter_cutoff)"/>
         <param if="$(eval arg('acceleration_filter_cutoff') != '')" name="acceleration_filter_cutoff" value="$(arg acceleration_filter_cutoff)"/>
         <param if="$(eval arg('derivative_reset_timeout') != '')" name="derivative_reset_timeout" value="$(arg derivative_reset_timeout)"/>
+        <param if="$(eval arg('mocap_noise_enabled') != '')" name="mocap_noise_enabled" value="$(arg mocap_noise_enabled)"/>
+        <param if="$(eval arg('mocap_noise_seed') != '')" name="mocap_noise_seed" value="$(arg mocap_noise_seed)"/>
         <param if="$(eval arg('trackers') != '')" name="trackers" value="$(arg trackers)"/>
         <param if="$(eval arg('match_mode') != '')" name="match_mode" value="$(arg match_mode)"/>
         <param if="$(eval arg('auto_track_known_models') != '')" name="auto_track_known_models" value="$(arg auto_track_known_models)"/>

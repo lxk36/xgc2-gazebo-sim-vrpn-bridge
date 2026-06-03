@@ -13,6 +13,16 @@ derivative_reset_timeout: 0.5
 match_mode: contains
 auto_track_known_models: false
 
+# Simulated mocap measurement noise. Real optical mocap is sub-centimeter and
+# static pose jitter is tiny, so keep the default deliberately small. The
+# nonzero default avoids a perfectly frozen Gazebo pose stream that makes
+# downstream stuck/loss checks unrealistic.
+mocap_noise:
+  enabled: true
+  position_stddev_xyz: [1.0e-7, 1.0e-7, 1.0e-7]
+  rotation_stddev_rpy: [0.0, 0.0, 0.0]
+  seed: 1
+
 # Legacy tracker patterns are matched against Gazebo model names only during
 # low-rate scans. Prefer manual_mapping or auto_mapping for new launch files.
 trackers: []
