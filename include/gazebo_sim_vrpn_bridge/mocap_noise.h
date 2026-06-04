@@ -16,7 +16,7 @@ struct MocapNoiseConfig {
 };
 
 class MocapNoise {
-public:
+  public:
     explicit MocapNoise(const MocapNoiseConfig& config = {})
         : config_(config), rng_(config.seed == 0 ? 1 : config.seed) {}
 
@@ -34,11 +34,7 @@ public:
         const double pitch_noise = sample(config_.rotation_stddev_rad[1]);
         const double yaw_noise = sample(config_.rotation_stddev_rad[2]);
         if (roll_noise != 0.0 || pitch_noise != 0.0 || yaw_noise != 0.0) {
-            tf2::Quaternion base(
-                pose.orientation.x,
-                pose.orientation.y,
-                pose.orientation.z,
-                pose.orientation.w);
+            tf2::Quaternion base(pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w);
             base.normalize();
 
             tf2::Quaternion noise;
@@ -55,7 +51,7 @@ public:
         return noisy;
     }
 
-private:
+  private:
     double sample(double stddev) {
         if (stddev <= 0.0) {
             return 0.0;
@@ -68,4 +64,4 @@ private:
     std::mt19937 rng_;
 };
 
-}  // namespace gazebo_sim_vrpn_bridge
+} // namespace gazebo_sim_vrpn_bridge

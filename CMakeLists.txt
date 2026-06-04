@@ -26,6 +26,7 @@ include_directories(
 add_executable(gazebo_vrpn_server_node
   src/gazebo_vrpn_server_node.cpp
 )
+target_compile_features(gazebo_vrpn_server_node PRIVATE cxx_std_14)
 
 add_dependencies(gazebo_vrpn_server_node
   ${catkin_EXPORTED_TARGETS}
@@ -55,6 +56,7 @@ if(CATKIN_ENABLE_TESTING)
   find_package(rostest REQUIRED)
   catkin_add_gtest(gazebo_sim_vrpn_bridge_mocap_noise_tests test/mocap_noise_tests.cpp)
   if(TARGET gazebo_sim_vrpn_bridge_mocap_noise_tests)
+    target_compile_features(gazebo_sim_vrpn_bridge_mocap_noise_tests PRIVATE cxx_std_14)
     target_link_libraries(gazebo_sim_vrpn_bridge_mocap_noise_tests ${catkin_LIBRARIES})
   endif()
   add_rostest(test/vrpn_protocol_e2e.test DEPENDENCIES gazebo_vrpn_server_node)

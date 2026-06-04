@@ -7,10 +7,10 @@
 namespace gazebo_sim_vrpn_bridge {
 
 class SecondOrderButterworthLowPass {
-public:
+  public:
     SecondOrderButterworthLowPass() = default;
 
-    SecondOrderButterworthLowPass(double cutoff_frequency_hz, double initial_value = 0.0) {
+    explicit SecondOrderButterworthLowPass(double cutoff_frequency_hz, double initial_value = 0.0) {
         reset(cutoff_frequency_hz, initial_value);
     }
 
@@ -45,8 +45,7 @@ public:
         }
 
         Coefficients c = coefficients(cutoff_frequency_hz_, dt_s);
-        const double output = c.b0 * input + c.b1 * x1_ + c.b2 * x2_ -
-                              c.a1 * y1_ - c.a2 * y2_;
+        const double output = c.b0 * input + c.b1 * x1_ + c.b2 * x2_ - c.a1 * y1_ - c.a2 * y2_;
         x2_ = x1_;
         x1_ = input;
         y2_ = y1_;
@@ -54,15 +53,11 @@ public:
         return output;
     }
 
-    double value() const {
-        return y1_;
-    }
+    double value() const { return y1_; }
 
-    double cutoffFrequencyHz() const {
-        return cutoff_frequency_hz_;
-    }
+    double cutoffFrequencyHz() const { return cutoff_frequency_hz_; }
 
-private:
+  private:
     struct Coefficients {
         double b0{1.0};
         double b1{0.0};
@@ -76,8 +71,7 @@ private:
         constexpr double pi = 3.14159265358979323846;
         const double sample_frequency_hz = 1.0 / dt_s;
         const double nyquist_hz = 0.5 * sample_frequency_hz;
-        const double safe_cutoff_hz =
-            std::max(1.0e-9, std::min(cutoff_frequency_hz, 0.45 * nyquist_hz));
+        const double safe_cutoff_hz = std::max(1.0e-9, std::min(cutoff_frequency_hz, 0.45 * nyquist_hz));
         const double warped = std::tan(pi * safe_cutoff_hz / sample_frequency_hz);
         const double warped2 = warped * warped;
         const double norm = 1.0 / (1.0 + sqrt2 * warped + warped2);
@@ -99,6 +93,6 @@ private:
     bool initialized_{false};
 };
 
-}  // namespace gazebo_sim_vrpn_bridge
+} // namespace gazebo_sim_vrpn_bridge
 
-#endif  // GAZEBO_SIM_VRPN_BRIDGE_BUTTERWORTH_FILTER_H
+#endif // GAZEBO_SIM_VRPN_BRIDGE_BUTTERWORTH_FILTER_H

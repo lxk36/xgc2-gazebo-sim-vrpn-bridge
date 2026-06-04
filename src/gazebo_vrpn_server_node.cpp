@@ -1,11 +1,12 @@
 #include <sys/time.h>
 
 #include <algorithm>
-#include <cctype>
-#include <cmath>
 #include <array>
 #include <atomic>
+#include <cctype>
+#include <cmath>
 #include <csignal>
+#include <iterator>
 #include <map>
 #include <memory>
 #include <regex>
@@ -44,12 +45,11 @@ void installSignalHandlers() {
     action.sa_flags = 0;
     sigaction(SIGTERM, &action, nullptr);
 }
-}  // namespace
+} // namespace
 
 class GazeboVrpnServerNode {
-public:
-    GazeboVrpnServerNode(ros::NodeHandle& nh, ros::NodeHandle& nh_private)
-        : nh_(nh), nh_private_(nh_private) {
+  public:
+    GazeboVrpnServerNode(ros::NodeHandle& nh, const ros::NodeHandle& nh_private) : nh_(nh), nh_private_(nh_private) {
         nh_private_.param<std::string>("model_states_topic", model_states_topic_, "/gazebo/model_states");
         nh_private_.param<std::string>("bind_address", bind_address_, "");
         nh_private_.param<int>("port", port_, 3883);
@@ -65,41 +65,38 @@ public:
         nh_private_.param<bool>("auto_track_known_models", auto_track_known_models_, false);
         loadConfig();
         validateConfig();
-        mocap_noise_config_.seed = mocap_noise_seed_param_ <= 0 ? 1 : static_cast<unsigned int>(mocap_noise_seed_param_);
+        mocap_noise_config_.seed =
+            mocap_noise_seed_param_ <= 0 ? 1 : static_cast<unsigned int>(mocap_noise_seed_param_);
         mocap_noise_ = MocapNoise(mocap_noise_config_);
 
-        connection_ = vrpn_create_server_connection(
-            port_, nullptr, nullptr, bind_address_.empty() ? nullptr : bind_address_.c_str());
+        connection_ = vrpn_create_server_connection(port_, nullptr, nullptr,
+                                                    bind_address_.empty() ? nullptr : bind_address_.c_str());
         if (connection_ == nullptr) {
             throw std::runtime_error("failed to create VRPN server connection");
         }
 
-        model_states_sub_ = nh_.subscribe(model_states_topic_, 1,
-                                          &GazeboVrpnServerNode::modelStatesCallback, this);
+        model_states_sub_ = nh_.subscribe(model_states_topic_, 1, &GazeboVrpnServerNode::modelStatesCallback, this);
 
         ROS_INFO_STREAM("[GazeboVrpnServerNode] Serving Gazebo models as VRPN trackers on port "
                         << port_ << (bind_address_.empty() ? "" : " bound to " + bind_address_));
         ROS_INFO_STREAM("[GazeboVrpnServerNode] Scan interval is " << scan_interval_s_
-                        << " s; match_mode=" << match_mode_);
+                                                                   << " s; match_mode=" << match_mode_);
         if (!tracker_patterns_.empty()) {
             ROS_INFO_STREAM("[GazeboVrpnServerNode] Tracker pattern count: " << tracker_patterns_.size());
         }
         if (!auto_include_patterns_.empty()) {
-            ROS_INFO_STREAM("[GazeboVrpnServerNode] Auto mapping pattern count: "
-                            << auto_include_patterns_.size());
+            ROS_INFO_STREAM("[GazeboVrpnServerNode] Auto mapping pattern count: " << auto_include_patterns_.size());
         }
         if (!auto_track_known_models_) {
             ROS_INFO_STREAM("[GazeboVrpnServerNode] Auto export is disabled; configure trackers or robots");
         }
         if (mocap_noise_config_.enabled) {
-            ROS_INFO_STREAM("[GazeboVrpnServerNode] Mocap measurement noise enabled: position stddev xyz=["
-                            << mocap_noise_config_.position_stddev_m[0] << ", "
-                            << mocap_noise_config_.position_stddev_m[1] << ", "
-                            << mocap_noise_config_.position_stddev_m[2] << "] m, rotation stddev rpy=["
-                            << mocap_noise_config_.rotation_stddev_rad[0] << ", "
-                            << mocap_noise_config_.rotation_stddev_rad[1] << ", "
-                            << mocap_noise_config_.rotation_stddev_rad[2] << "] rad, seed="
-                            << mocap_noise_config_.seed);
+            ROS_INFO_STREAM(
+                "[GazeboVrpnServerNode] Mocap measurement noise enabled: position stddev xyz=["
+                << mocap_noise_config_.position_stddev_m[0] << ", " << mocap_noise_config_.position_stddev_m[1] << ", "
+                << mocap_noise_config_.position_stddev_m[2] << "] m, rotation stddev rpy=["
+                << mocap_noise_config_.rotation_stddev_rad[0] << ", " << mocap_noise_config_.rotation_stddev_rad[1]
+                << ", " << mocap_noise_config_.rotation_stddev_rad[2] << "] rad, seed=" << mocap_noise_config_.seed);
         }
     }
 
@@ -124,7 +121,7 @@ public:
         }
     }
 
-private:
+  private:
     void modelStatesCallback(const gazebo_msgs::ModelStates::ConstPtr& msg) {
         if (!msg || msg->name.size() != msg->pose.size()) {
             ROS_WARN_THROTTLE(2.0, "[GazeboVrpnServerNode] Invalid /gazebo/model_states message");
@@ -139,8 +136,7 @@ private:
     }
 
     bool shouldScan(const ros::WallTime& now) const {
-        return last_scan_wall_time_.toSec() == 0.0 ||
-               (now - last_scan_wall_time_).toSec() >= scan_interval_s_;
+        return last_scan_wall_time_.toSec() == 0.0 || (now - last_scan_wall_time_).toSec() >= scan_interval_s_;
     }
 
     void scanModelList(const gazebo_msgs::ModelStates& msg, const ros::WallTime& now) {
@@ -158,8 +154,7 @@ private:
         last_scan_wall_time_ = now;
 
         if (!matched_any_model) {
-            ROS_WARN_THROTTLE(2.0,
-                              "[GazeboVrpnServerNode] No configured tracker matched models in %s",
+            ROS_WARN_THROTTLE(2.0, "[GazeboVrpnServerNode] No configured tracker matched models in %s",
                               model_states_topic_.c_str());
         }
     }
@@ -192,8 +187,7 @@ private:
         std::unique_ptr<vrpn_Tracker_Server> tracker;
     };
 
-    TrackedModel* ensureTrackedModel(const std::string& gazebo_model_name,
-                                     const std::string& tracker_name,
+    TrackedModel* ensureTrackedModel(const std::string& gazebo_model_name, const std::string& tracker_name,
                                      size_t model_index) {
         auto existing = tracked_models_.find(gazebo_model_name);
         if (existing != tracked_models_.end()) {
@@ -202,10 +196,9 @@ private:
         }
 
         if (tracker_names_.count(tracker_name) > 0) {
-            ROS_WARN_STREAM_THROTTLE(10.0,
-                                     "[GazeboVrpnServerNode] Ignoring Gazebo model '" << gazebo_model_name
-                                     << "' because tracker name '" << tracker_name
-                                     << "' is already in use");
+            ROS_WARN_STREAM_THROTTLE(10.0, "[GazeboVrpnServerNode] Ignoring Gazebo model '"
+                                               << gazebo_model_name << "' because tracker name '" << tracker_name
+                                               << "' is already in use");
             return nullptr;
         }
 
@@ -214,10 +207,10 @@ private:
         model.tracker_name = tracker_name;
         model.body_to_tracker = bodyToTrackerFor(tracker_name);
         model.model_index = model_index;
-        model.tracker.reset(new vrpn_Tracker_Server(tracker_name.c_str(), connection_, 1));
+        model.tracker = std::make_unique<vrpn_Tracker_Server>(tracker_name.c_str(), connection_, 1);
 
-        ROS_INFO_STREAM("[GazeboVrpnServerNode] Registered Gazebo model '" << gazebo_model_name
-                        << "' as VRPN tracker '" << tracker_name << "'");
+        ROS_INFO_STREAM("[GazeboVrpnServerNode] Registered Gazebo model '" << gazebo_model_name << "' as VRPN tracker '"
+                                                                           << tracker_name << "'");
         tracker_names_[tracker_name] = gazebo_model_name;
         auto result = tracked_models_.emplace(gazebo_model_name, std::move(model));
         return &result.first->second;
@@ -226,8 +219,7 @@ private:
     void updateTrackedModelPoses(const gazebo_msgs::ModelStates& msg, const ros::WallTime& now) {
         for (auto& entry : tracked_models_) {
             TrackedModel& model = entry.second;
-            if (model.model_index >= msg.pose.size() ||
-                model.model_index >= msg.name.size() ||
+            if (model.model_index >= msg.pose.size() || model.model_index >= msg.name.size() ||
                 msg.name[model.model_index] != model.gazebo_model_name) {
                 model.have_pose = false;
                 continue;
@@ -254,8 +246,7 @@ private:
 
             const double age_s = (ros::WallTime::now() - model.last_model_state_wall_time).toSec();
             if (age_s > stale_timeout_s_) {
-                ROS_WARN_THROTTLE(2.0,
-                                  "[GazeboVrpnServerNode] Last Gazebo pose for '%s' is stale: %.3f s",
+                ROS_WARN_THROTTLE(2.0, "[GazeboVrpnServerNode] Last Gazebo pose for '%s' is stale: %.3f s",
                                   model.gazebo_model_name.c_str(), age_s);
             }
 
@@ -274,8 +265,7 @@ private:
 
             const int status = model.tracker->report_pose(0, timestamp, position, quaternion);
             if (status != 0) {
-                ROS_WARN_THROTTLE(2.0,
-                                  "[GazeboVrpnServerNode] Failed to publish VRPN pose for '%s'",
+                ROS_WARN_THROTTLE(2.0, "[GazeboVrpnServerNode] Failed to publish VRPN pose for '%s'",
                                   model.tracker_name.c_str());
             }
 
@@ -285,14 +275,12 @@ private:
                     model.linear_velocity.y(),
                     model.linear_velocity.z(),
                 };
-                vrpn_float64 angular_velocity[4] {};
+                vrpn_float64 angular_velocity[4]{};
                 vectorRpyToQuaternion(model.angular_velocity, angular_velocity);
-                const int velocity_status =
-                    model.tracker->report_pose_velocity(0, timestamp, linear_velocity,
-                                                        angular_velocity, reportInterval(model));
+                const int velocity_status = model.tracker->report_pose_velocity(
+                    0, timestamp, linear_velocity, angular_velocity, reportInterval(model));
                 if (velocity_status != 0) {
-                    ROS_WARN_THROTTLE(2.0,
-                                      "[GazeboVrpnServerNode] Failed to publish VRPN twist for '%s'",
+                    ROS_WARN_THROTTLE(2.0, "[GazeboVrpnServerNode] Failed to publish VRPN twist for '%s'",
                                       model.tracker_name.c_str());
                 }
             }
@@ -303,23 +291,19 @@ private:
                     model.linear_acceleration.y(),
                     model.linear_acceleration.z(),
                 };
-                vrpn_float64 angular_acceleration[4] {};
+                vrpn_float64 angular_acceleration[4]{};
                 vectorRpyToQuaternion(model.angular_acceleration, angular_acceleration);
-                const int acceleration_status =
-                    model.tracker->report_pose_acceleration(0, timestamp, linear_acceleration,
-                                                            angular_acceleration,
-                                                            reportInterval(model));
+                const int acceleration_status = model.tracker->report_pose_acceleration(
+                    0, timestamp, linear_acceleration, angular_acceleration, reportInterval(model));
                 if (acceleration_status != 0) {
-                    ROS_WARN_THROTTLE(2.0,
-                                      "[GazeboVrpnServerNode] Failed to publish VRPN accel for '%s'",
+                    ROS_WARN_THROTTLE(2.0, "[GazeboVrpnServerNode] Failed to publish VRPN accel for '%s'",
                                       model.tracker_name.c_str());
                 }
             }
         }
     }
 
-    void updateDerivativeState(TrackedModel& model,
-                               const tf2::Transform& world_tracker,
+    void updateDerivativeState(TrackedModel& model, const tf2::Transform& world_tracker,
                                const ros::WallTime& fallback_time) {
         const double sample_time_s = sampleTimeSeconds(fallback_time);
         if (!model.have_derivative_state) {
@@ -336,8 +320,7 @@ private:
         const tf2::Vector3 raw_linear_velocity =
             (world_tracker.getOrigin() - model.last_tracker_transform.getOrigin()) / dt_s;
         const tf2::Vector3 raw_angular_velocity =
-            angularVelocityBetween(model.last_tracker_transform.getRotation(),
-                                   world_tracker.getRotation(), dt_s);
+            angularVelocityBetween(model.last_tracker_transform.getRotation(), world_tracker.getRotation(), dt_s);
 
         model.linear_velocity = filterVector(model.linear_velocity_filters, raw_linear_velocity, dt_s);
         model.angular_velocity = filterVector(model.angular_velocity_filters, raw_angular_velocity, dt_s);
@@ -347,8 +330,7 @@ private:
                 (raw_linear_velocity - model.previous_raw_linear_velocity) / dt_s;
             const tf2::Vector3 raw_angular_acceleration =
                 (raw_angular_velocity - model.previous_raw_angular_velocity) / dt_s;
-            model.linear_acceleration =
-                filterVector(model.linear_acceleration_filters, raw_linear_acceleration, dt_s);
+            model.linear_acceleration = filterVector(model.linear_acceleration_filters, raw_linear_acceleration, dt_s);
             model.angular_acceleration =
                 filterVector(model.angular_acceleration_filters, raw_angular_acceleration, dt_s);
             model.have_acceleration = true;
@@ -363,8 +345,7 @@ private:
         model.have_velocity = true;
     }
 
-    void initializeDerivativeState(TrackedModel& model,
-                                   const tf2::Transform& world_tracker,
+    void initializeDerivativeState(TrackedModel& model, const tf2::Transform& world_tracker,
                                    double sample_time_s) const {
         model.last_tracker_transform = world_tracker;
         model.last_model_state_time_s = sample_time_s;
@@ -394,24 +375,19 @@ private:
     }
 
     static void resetFilters(std::array<gazebo_sim_vrpn_bridge::SecondOrderButterworthLowPass, 3>& filters,
-                             double cutoff_hz,
-                             double value) {
+                             double cutoff_hz, double value) {
         for (auto& filter : filters) {
             filter.reset(cutoff_hz, value);
         }
     }
 
-    static tf2::Vector3 filterVector(
-        std::array<gazebo_sim_vrpn_bridge::SecondOrderButterworthLowPass, 3>& filters,
-        const tf2::Vector3& value,
-        double dt_s) {
-        return tf2::Vector3(filters[0].filter(value.x(), dt_s),
-                            filters[1].filter(value.y(), dt_s),
+    static tf2::Vector3 filterVector(std::array<gazebo_sim_vrpn_bridge::SecondOrderButterworthLowPass, 3>& filters,
+                                     const tf2::Vector3& value, double dt_s) {
+        return tf2::Vector3(filters[0].filter(value.x(), dt_s), filters[1].filter(value.y(), dt_s),
                             filters[2].filter(value.z(), dt_s));
     }
 
-    static tf2::Vector3 angularVelocityBetween(const tf2::Quaternion& previous,
-                                               const tf2::Quaternion& current,
+    static tf2::Vector3 angularVelocityBetween(const tf2::Quaternion& previous, const tf2::Quaternion& current,
                                                double dt_s) {
         tf2::Quaternion delta = current * previous.inverse();
         delta.normalize();
@@ -428,8 +404,7 @@ private:
         return axis * (angle / dt_s);
     }
 
-    static void vectorRpyToQuaternion(const tf2::Vector3& rpy,
-                                      vrpn_float64 quaternion[4]) {
+    static void vectorRpyToQuaternion(const tf2::Vector3& rpy, vrpn_float64 quaternion[4]) {
         tf2::Quaternion q;
         q.setRPY(rpy.x(), rpy.y(), rpy.z());
         q.normalize();
@@ -447,8 +422,7 @@ private:
     }
 
     static bool startsWith(const std::string& value, const std::string& prefix) {
-        return value.size() >= prefix.size() &&
-               value.compare(0, prefix.size(), prefix) == 0;
+        return value.size() >= prefix.size() && value.compare(0, prefix.size(), prefix) == 0;
     }
 
     static std::string trimSlashes(std::string value) {
@@ -461,18 +435,17 @@ private:
         return value;
     }
 
-    static bool isNumberedNamespace(const std::string& value,
-                                    const std::string& prefix) {
+    static bool isNumberedNamespace(const std::string& value, const std::string& prefix) {
         if (!startsWith(value, prefix) || value.size() == prefix.size()) {
             return false;
         }
-        return std::all_of(value.begin() + static_cast<long>(prefix.size()), value.end(),
-                           [](unsigned char ch) { return std::isdigit(ch); });
+        return std::all_of(value.begin() + static_cast<long>(prefix.size()), value.end(), [](unsigned char ch) {
+            return std::isdigit(ch);
+        });
     }
 
     static bool isSupportedNamespace(const std::string& value) {
-        return isNumberedNamespace(value, "ugv") ||
-               isNumberedNamespace(value, "uav") ||
+        return isNumberedNamespace(value, "ugv") || isNumberedNamespace(value, "uav") ||
                isNumberedNamespace(value, "tello");
     }
 
@@ -496,15 +469,14 @@ private:
                     return true;
                 }
             } catch (const std::regex_error& e) {
-                throw std::runtime_error("invalid auto_mapping.include_patterns regex '" +
-                                         pattern + "': " + e.what());
+                throw std::runtime_error("invalid auto_mapping.include_patterns regex '" + pattern + "': " + e.what());
             }
         }
         return false;
     }
 
     std::string trackerNameForGazeboModel(const std::string& gazebo_model_name) const {
-        const std::string name = trimSlashes(gazebo_model_name);
+        std::string name = trimSlashes(gazebo_model_name);
         if (name.empty()) {
             return {};
         }
@@ -514,10 +486,12 @@ private:
             return configured->second;
         }
 
-        for (const std::string& pattern : tracker_patterns_) {
-            if (matchesPattern(name, pattern)) {
-                return pattern;
-            }
+        const auto matched_pattern =
+            std::find_if(tracker_patterns_.begin(), tracker_patterns_.end(), [this, &name](const std::string& pattern) {
+                return matchesPattern(name, pattern);
+            });
+        if (matched_pattern != tracker_patterns_.end()) {
+            return *matched_pattern;
         }
 
         if (!auto_track_known_models_) {
@@ -542,15 +516,14 @@ private:
 
         const std::string scout_mini_prefix = "scout_mini_";
         if (auto_include_patterns_.empty() && startsWith(name, scout_mini_prefix)) {
-            const std::string suffix = trimSlashes(name.substr(scout_mini_prefix.size()));
+            std::string suffix = trimSlashes(name.substr(scout_mini_prefix.size()));
             if (isSupportedNamespace(suffix)) {
                 return suffix;
             }
         }
 
         // Legacy single-UGV Gazebo names in this workspace did not encode the namespace.
-        if (auto_include_patterns_.empty() &&
-            (name == "scout_mini_ros_control" || name == "scout_description")) {
+        if (auto_include_patterns_.empty() && (name == "scout_mini_ros_control" || name == "scout_description")) {
             return "ugv1";
         }
 
@@ -624,13 +597,11 @@ private:
         }
         if (noise.hasMember("position_stddev_xyz")) {
             mocap_noise_config_.position_stddev_m =
-                toArray3(parseDoubleVector(noise["position_stddev_xyz"],
-                                           "mocap_noise.position_stddev_xyz", 3));
+                toArray3(parseDoubleVector(noise["position_stddev_xyz"], "mocap_noise.position_stddev_xyz", 3));
         }
         if (noise.hasMember("rotation_stddev_rpy")) {
             mocap_noise_config_.rotation_stddev_rad =
-                toArray3(parseDoubleVector(noise["rotation_stddev_rpy"],
-                                           "mocap_noise.rotation_stddev_rpy", 3));
+                toArray3(parseDoubleVector(noise["rotation_stddev_rpy"], "mocap_noise.rotation_stddev_rpy", 3));
         }
         if (noise.hasMember("seed")) {
             mocap_noise_seed_param_ = static_cast<int>(xmlRpcToDouble(noise["seed"], "mocap_noise.seed"));
@@ -645,8 +616,7 @@ private:
             auto_track_known_models_ = static_cast<bool>(auto_mapping["enabled"]);
         }
         if (auto_mapping.hasMember("include_patterns")) {
-            auto_include_patterns_ = parseStringList(auto_mapping["include_patterns"],
-                                                     "auto_mapping.include_patterns");
+            auto_include_patterns_ = parseStringList(auto_mapping["include_patterns"], "auto_mapping.include_patterns");
         }
     }
 
@@ -655,9 +625,9 @@ private:
             throw std::runtime_error("robots must be a YAML mapping");
         }
 
-        for (auto it = robots.begin(); it != robots.end(); ++it) {
-            const std::string tracker_name = it->first;
-            XmlRpc::XmlRpcValue& value = it->second;
+        for (auto& robot : robots) {
+            const std::string tracker_name = robot.first;
+            XmlRpc::XmlRpcValue& value = robot.second;
             if (value.getType() != XmlRpc::XmlRpcValue::TypeStruct) {
                 throw std::runtime_error("robots." + tracker_name + " must be a YAML mapping");
             }
@@ -679,8 +649,8 @@ private:
                 configured_model_to_tracker_[trimSlashes(config.gazebo_model_name)] = tracker_name;
             }
             if (value.hasMember("body_to_tracker")) {
-                config.body_to_tracker = parseTransform(value["body_to_tracker"],
-                                                        "robots." + tracker_name + ".body_to_tracker");
+                config.body_to_tracker =
+                    parseTransform(value["body_to_tracker"], "robots." + tracker_name + ".body_to_tracker");
             }
             robot_configs_[tracker_name] = config;
         }
@@ -690,12 +660,12 @@ private:
         if (manual_mapping.getType() != XmlRpc::XmlRpcValue::TypeStruct) {
             throw std::runtime_error("manual_mapping must be a YAML mapping");
         }
-        for (auto it = manual_mapping.begin(); it != manual_mapping.end(); ++it) {
-            XmlRpc::XmlRpcValue& value = it->second;
+        for (auto& mapping : manual_mapping) {
+            XmlRpc::XmlRpcValue& value = mapping.second;
             if (value.getType() != XmlRpc::XmlRpcValue::TypeString) {
-                throw std::runtime_error("manual_mapping." + it->first + " must be a tracker name string");
+                throw std::runtime_error("manual_mapping." + mapping.first + " must be a tracker name string");
             }
-            const std::string gazebo_model_name = trimSlashes(it->first);
+            const std::string gazebo_model_name = trimSlashes(mapping.first);
             const std::string tracker_name = trimSlashes(static_cast<std::string>(value));
             if (!gazebo_model_name.empty() && !tracker_name.empty()) {
                 configured_model_to_tracker_[gazebo_model_name] = tracker_name;
@@ -707,18 +677,17 @@ private:
         if (extrinsics.getType() != XmlRpc::XmlRpcValue::TypeStruct) {
             throw std::runtime_error("extrinsics must be a YAML mapping");
         }
-        for (auto it = extrinsics.begin(); it != extrinsics.end(); ++it) {
-            const std::string tracker_name = trimSlashes(it->first);
+        for (auto& extrinsic : extrinsics) {
+            const std::string tracker_name = trimSlashes(extrinsic.first);
             if (tracker_name.empty()) {
                 continue;
             }
             RobotConfig& config = robot_configs_[tracker_name];
-            config.body_to_tracker = parseTransform(it->second, "extrinsics." + tracker_name);
+            config.body_to_tracker = parseTransform(extrinsic.second, "extrinsics." + tracker_name);
         }
     }
 
-    static std::vector<std::string> parseStringList(XmlRpc::XmlRpcValue& value,
-                                                    const std::string& param_name) {
+    static std::vector<std::string> parseStringList(XmlRpc::XmlRpcValue& value, const std::string& param_name) {
         std::vector<std::string> result;
         std::set<std::string> seen;
         if (value.getType() == XmlRpc::XmlRpcValue::TypeString) {
@@ -727,14 +696,16 @@ private:
         if (value.getType() != XmlRpc::XmlRpcValue::TypeArray) {
             throw std::runtime_error(param_name + " must be a YAML list");
         }
-        for (int i = 0; i < value.size(); ++i) {
-            if (value[i].getType() != XmlRpc::XmlRpcValue::TypeString) {
+        int index = 0;
+        while (index < value.size()) {
+            if (value[index].getType() != XmlRpc::XmlRpcValue::TypeString) {
                 throw std::runtime_error(param_name + " entries must be strings");
             }
-            const std::string item = trimSlashes(static_cast<std::string>(value[i]));
+            const std::string item = trimSlashes(static_cast<std::string>(value[index]));
             if (!item.empty() && seen.insert(item).second) {
                 result.push_back(item);
             }
+            ++index;
         }
         return result;
     }
@@ -744,9 +715,9 @@ private:
         std::set<std::string> seen;
         std::string normalized;
         normalized.reserve(value.size());
-        for (char ch : value) {
-            normalized.push_back((ch == ',' || ch == ';') ? ' ' : ch);
-        }
+        std::transform(value.begin(), value.end(), std::back_inserter(normalized), [](char ch) {
+            return (ch == ',' || ch == ';') ? ' ' : ch;
+        });
 
         std::istringstream stream(normalized);
         std::string item;
@@ -774,8 +745,7 @@ private:
         }
     }
 
-    static tf2::Transform parseTransform(XmlRpc::XmlRpcValue& value,
-                                         const std::string& param_name) {
+    static tf2::Transform parseTransform(XmlRpc::XmlRpcValue& value, const std::string& param_name) {
         if (value.getType() != XmlRpc::XmlRpcValue::TypeStruct) {
             throw std::runtime_error(param_name + " must be a YAML mapping");
         }
@@ -793,13 +763,11 @@ private:
             const std::vector<double> rpy = parseDoubleVector(value["rpy"], param_name + ".rpy", 3);
             q.setRPY(rpy[0], rpy[1], rpy[2]);
         } else if (value.hasMember("rotation_rpy")) {
-            const std::vector<double> rpy = parseDoubleVector(value["rotation_rpy"],
-                                                              param_name + ".rotation_rpy", 3);
+            const std::vector<double> rpy = parseDoubleVector(value["rotation_rpy"], param_name + ".rotation_rpy", 3);
             q.setRPY(rpy[0], rpy[1], rpy[2]);
         }
         if (value.hasMember("quaternion")) {
-            const std::vector<double> quat = parseDoubleVector(value["quaternion"],
-                                                               param_name + ".quaternion", 4);
+            const std::vector<double> quat = parseDoubleVector(value["quaternion"], param_name + ".quaternion", 4);
             q = tf2::Quaternion(quat[0], quat[1], quat[2], quat[3]);
         }
         q.normalize();
@@ -807,19 +775,19 @@ private:
         return tf2::Transform(q, tf2::Vector3(xyz[0], xyz[1], xyz[2]));
     }
 
-    static std::vector<double> parseDoubleVector(XmlRpc::XmlRpcValue& value,
-                                                 const std::string& param_name,
+    static std::vector<double> parseDoubleVector(XmlRpc::XmlRpcValue& value, const std::string& param_name,
                                                  int expected_size) {
-        if (value.getType() != XmlRpc::XmlRpcValue::TypeArray ||
-            value.size() != expected_size) {
-            throw std::runtime_error(param_name + " must be a YAML list of " +
-                                     std::to_string(expected_size) + " numbers");
+        if (value.getType() != XmlRpc::XmlRpcValue::TypeArray || value.size() != expected_size) {
+            throw std::runtime_error(param_name + " must be a YAML list of " + std::to_string(expected_size) +
+                                     " numbers");
         }
 
         std::vector<double> result;
         result.reserve(static_cast<size_t>(expected_size));
-        for (int i = 0; i < value.size(); ++i) {
-            result.push_back(xmlRpcToDouble(value[i], param_name));
+        int index = 0;
+        while (index < value.size()) {
+            result.push_back(xmlRpcToDouble(value[index], param_name));
+            ++index;
         }
         return result;
     }
@@ -828,8 +796,7 @@ private:
         return {{values[0], values[1], values[2]}};
     }
 
-    static double xmlRpcToDouble(XmlRpc::XmlRpcValue& value,
-                                 const std::string& param_name) {
+    static double xmlRpcToDouble(XmlRpc::XmlRpcValue& value, const std::string& param_name) {
         if (value.getType() == XmlRpc::XmlRpcValue::TypeInt) {
             return static_cast<int>(value);
         }
@@ -840,14 +807,9 @@ private:
     }
 
     static tf2::Transform poseToTransform(const geometry_msgs::Pose& pose) {
-        tf2::Quaternion q(pose.orientation.x,
-                          pose.orientation.y,
-                          pose.orientation.z,
-                          pose.orientation.w);
+        tf2::Quaternion q(pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w);
         q.normalize();
-        return tf2::Transform(q, tf2::Vector3(pose.position.x,
-                                              pose.position.y,
-                                              pose.position.z));
+        return tf2::Transform(q, tf2::Vector3(pose.position.x, pose.position.y, pose.position.z));
     }
 
     static geometry_msgs::Pose transformToPose(const tf2::Transform& transform) {
@@ -892,7 +854,7 @@ private:
     std::map<std::string, std::string> tracker_names_;
 };
 
-}  // namespace gazebo_sim_vrpn_bridge
+} // namespace gazebo_sim_vrpn_bridge
 
 int main(int argc, char** argv) {
     ros::init(argc, argv, "gazebo_vrpn_server_node");

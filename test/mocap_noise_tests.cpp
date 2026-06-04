@@ -17,13 +17,11 @@ geometry_msgs::Pose identityPose() {
 }
 
 double positionNorm(const geometry_msgs::Pose& pose) {
-    return std::sqrt(
-        pose.position.x * pose.position.x +
-        pose.position.y * pose.position.y +
-        pose.position.z * pose.position.z);
+    return std::sqrt(pose.position.x * pose.position.x + pose.position.y * pose.position.y +
+                     pose.position.z * pose.position.z);
 }
 
-}  // namespace
+} // namespace
 
 TEST(MocapNoise, DisabledLeavesPoseUnchanged) {
     MocapNoiseConfig config;
