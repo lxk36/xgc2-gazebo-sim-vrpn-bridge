@@ -7,7 +7,7 @@
     <arg name="refresh_tracker_frequency" default="0.0"/>
     <arg name="frame_id" default="world"/>
     <arg name="use_server_time" default="false"/>
-    <arg name="broadcast_tf" default="true"/>
+    <arg name="broadcast_tf" default="false"/>
 
     <node pkg="vrpn_client_ros"
           type="vrpn_client_node"
