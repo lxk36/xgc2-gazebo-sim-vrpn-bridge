@@ -1,0 +1,27 @@
+model_states_topic: /gazebo/model_states
+bind_address: ""
+port: 3883
+publish_rate: 120.0
+scan_interval: 1.0
+stale_timeout: 1.0
+velocity_filter_cutoff: 25.0
+acceleration_filter_cutoff: 25.0
+derivative_reset_timeout: 0.5
+match_mode: exact
+auto_track_known_models: false
+trackers: []
+
+auto_mapping:
+  enabled: false
+  include_patterns: []
+
+manual_mapping:
+  uav1: uav1
+  ugv1: ugv1
+
+default_body_to_tracker:
+  xyz: [0.0, 0.0, 0.0]
+  rpy: [0.0, 0.0, 0.0]
+
+extrinsics: {}
+robots: {}

@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <launch>
     <arg name="config" default="$(find gazebo_sim_vrpn_bridge)/config/vrpn_server.yaml"/>
+    <arg name="config_file" default="$(arg config)"/>
     <arg name="model_states_topic" default=""/>
     <arg name="bind_address" default=""/>
     <arg name="port" default=""/>
@@ -19,8 +20,9 @@
     <node pkg="gazebo_sim_vrpn_bridge"
           type="gazebo_vrpn_server_node"
           name="gazebo_vrpn_server"
-          output="screen">
-        <rosparam file="$(arg config)" command="load"/>
+          output="screen"
+          clear_params="true">
+        <rosparam file="$(arg config_file)" command="load"/>
         <param if="$(eval arg('model_states_topic') != '')" name="model_states_topic" value="$(arg model_states_topic)"/>
         <param if="$(eval arg('bind_address') != '')" name="bind_address" value="$(arg bind_address)"/>
         <param if="$(eval arg('port') != '')" name="port" value="$(arg port)"/>
