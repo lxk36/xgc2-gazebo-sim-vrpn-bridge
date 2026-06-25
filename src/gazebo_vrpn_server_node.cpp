@@ -24,9 +24,9 @@
 #include <tf2/LinearMath/Transform.h>
 #include <vrpn_Connection.h>
 #include <vrpn_Tracker.h>
+#include <xgc2_math/filter/butterworth_filter.hpp>
 #include <xmlrpcpp/XmlRpcValue.h>
 
-#include "gazebo_sim_vrpn_bridge/butterworth_filter.h"
 #include "gazebo_sim_vrpn_bridge/mocap_noise.h"
 
 namespace gazebo_sim_vrpn_bridge {
@@ -170,10 +170,10 @@ class GazeboVrpnServerNode {
         tf2::Vector3 angular_acceleration{0.0, 0.0, 0.0};
         tf2::Vector3 previous_raw_linear_velocity{0.0, 0.0, 0.0};
         tf2::Vector3 previous_raw_angular_velocity{0.0, 0.0, 0.0};
-        std::array<gazebo_sim_vrpn_bridge::SecondOrderButterworthLowPass, 3> linear_velocity_filters;
-        std::array<gazebo_sim_vrpn_bridge::SecondOrderButterworthLowPass, 3> angular_velocity_filters;
-        std::array<gazebo_sim_vrpn_bridge::SecondOrderButterworthLowPass, 3> linear_acceleration_filters;
-        std::array<gazebo_sim_vrpn_bridge::SecondOrderButterworthLowPass, 3> angular_acceleration_filters;
+        std::array<xgc2_math::SecondOrderButterworthLowPass, 3> linear_velocity_filters;
+        std::array<xgc2_math::SecondOrderButterworthLowPass, 3> angular_velocity_filters;
+        std::array<xgc2_math::SecondOrderButterworthLowPass, 3> linear_acceleration_filters;
+        std::array<xgc2_math::SecondOrderButterworthLowPass, 3> angular_acceleration_filters;
         tf2::Transform body_to_tracker;
         ros::WallTime last_model_state_wall_time;
         double last_model_state_time_s{0.0};
@@ -374,14 +374,14 @@ class GazeboVrpnServerNode {
         return fallback_time.toSec();
     }
 
-    static void resetFilters(std::array<gazebo_sim_vrpn_bridge::SecondOrderButterworthLowPass, 3>& filters,
-                             double cutoff_hz, double value) {
+    static void resetFilters(std::array<xgc2_math::SecondOrderButterworthLowPass, 3>& filters, double cutoff_hz,
+                             double value) {
         for (auto& filter : filters) {
             filter.reset(cutoff_hz, value);
         }
     }
 
-    static tf2::Vector3 filterVector(std::array<gazebo_sim_vrpn_bridge::SecondOrderButterworthLowPass, 3>& filters,
+    static tf2::Vector3 filterVector(std::array<xgc2_math::SecondOrderButterworthLowPass, 3>& filters,
                                      const tf2::Vector3& value, double dt_s) {
         return tf2::Vector3(filters[0].filter(value.x(), dt_s), filters[1].filter(value.y(), dt_s),
                             filters[2].filter(value.z(), dt_s));

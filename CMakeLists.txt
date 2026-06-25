@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(VRPN REQUIRED)
 find_package(Threads REQUIRED)
+find_package(xgc2_math REQUIRED CONFIG)
 
 catkin_package(
   INCLUDE_DIRS include
@@ -35,6 +36,7 @@ add_dependencies(gazebo_vrpn_server_node
 target_link_libraries(gazebo_vrpn_server_node
   ${catkin_LIBRARIES}
   ${VRPN_SERVER_LIBRARIES}
+  xgc2_math::math
   Threads::Threads
 )
 
