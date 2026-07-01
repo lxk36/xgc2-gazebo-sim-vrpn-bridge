@@ -14,17 +14,17 @@ on:
       publish_apt:
         description: Publish built debs to the XGC2 APT repository
         required: true
-        default: true
+        default: false
         type: boolean
       run_cpp_quality:
         description: Run optional C++ quality checks before release
         required: true
-        default: true
+        default: false
         type: boolean
       run_source_tests:
         description: Run optional source tests before release
         required: true
-        default: true
+        default: false
         type: boolean
 
 defaults:
