@@ -1,0 +1,138 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_version:
+        description: Product version expected by the release orchestrator
+        required: true
+        type: string
+      expected_source_sha:
+        description: Source commit SHA expected by the release orchestrator
+        required: true
+        type: string
+      publish_apt:
+        description: Publish built debs to the XGC2 APT repository
+        required: true
+        default: true
+        type: boolean
+      run_cpp_quality:
+        description: Run optional C++ quality checks before release
+        required: true
+        default: true
+        type: boolean
+      run_source_tests:
+        description: Run optional source tests before release
+        required: true
+        default: true
+        type: boolean
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  validate-release-inputs:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.product.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate expected version and source SHA
+        id: product
+        run: |
+          set -euo pipefail
+          version="$(sed -nE 's|^version:[[:space:]]*([^[:space:]#]+).*|\1|p' .xgc2/product.yml | head -n1)"
+          if [[ -z "${version}" ]]; then
+            echo "::error::missing version in .xgc2/product.yml"
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          if [[ "${version}" != "${{ inputs.expected_version }}" ]]; then
+            echo "::error::product.yml version ${version} does not match expected_version ${{ inputs.expected_version }}"
+            exit 1
+          fi
+          source_sha="$(git rev-parse HEAD)"
+          if [[ "${source_sha}" != "${{ inputs.expected_source_sha }}" ]]; then
+            echo "::error::HEAD ${source_sha} does not match expected_source_sha ${{ inputs.expected_source_sha }}"
+            exit 1
+          fi
+
+  release-checks:
+    needs: validate-release-inputs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Run release checks
+        run: |
+          set -euo pipefail
+          git diff --check HEAD
+          if [[ "${{ inputs.run_cpp_quality }}" == "true" && -x .xgc2/scripts/check_cpp_quality.sh ]]; then
+            .xgc2/scripts/check_cpp_quality.sh
+          fi
+          if [[ "${{ inputs.run_cpp_quality }}" == "true" && -x .xgc2/scripts/check_package_compliance.sh ]]; then
+            .xgc2/scripts/check_package_compliance.sh
+          fi
+          if [[ "${{ inputs.run_source_tests }}" == "true" && -x .xgc2/scripts/run_package_tests.sh ]]; then
+            .xgc2/scripts/run_package_tests.sh
+          fi
+
+  build-debs:
+    needs:
+      - validate-release-inputs
+      - release-checks
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and install-check deb packages
+        run: |
+          .xgc2/scripts/build_debs_in_docker.sh \
+            --work-dir "$RUNNER_TEMP/xgc2-gazebo-sim-vrpn-bridge-${{ matrix.arch }}" \
+            --output-dir "$GITHUB_WORKSPACE/debs"
+
+      - name: Upload deb artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: xgc2-gazebo-sim-vrpn-bridge-release-debs-${{ matrix.arch }}
+          path: debs/*.deb
+
+  publish-apt:
+    if: ${{ inputs.publish_apt }}
+    needs: build-debs
+    runs-on: ubuntu-latest
+    env:
+      APT_REPO_HOST: ${{ secrets.APT_REPO_HOST }}
+      APT_REPO_PORT: ${{ secrets.APT_REPO_PORT }}
+      APT_REPO_SSH_KEY: ${{ secrets.APT_REPO_SSH_KEY }}
+      APT_REPO_KNOWN_HOSTS: ${{ secrets.APT_REPO_KNOWN_HOSTS }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download deb artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: xgc2-gazebo-sim-vrpn-bridge-release-debs-*
+          path: debs
+          merge-multiple: true
+
+      - name: Publish to self-hosted APT repository
+        run: |
+          set -euo pipefail
+          test -n "${APT_REPO_HOST}"
+          test -n "${APT_REPO_SSH_KEY}"
+          test -n "${APT_REPO_KNOWN_HOSTS}"
+          export APT_REPO_PORT="${APT_REPO_PORT:-22}"
+          .xgc2/scripts/publish_apt_repo.sh --deb-dir debs

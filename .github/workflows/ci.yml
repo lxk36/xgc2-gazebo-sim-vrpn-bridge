@@ -1,0 +1,57 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  compliance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Run metadata checks
+        run: |
+          set -euo pipefail
+          git diff --check HEAD
+          if [[ -x .xgc2/scripts/check_version_bump.sh ]]; then
+            .xgc2/scripts/check_version_bump.sh --ci
+          fi
+          if [[ -x .xgc2/scripts/check_package_compliance.sh ]]; then
+            .xgc2/scripts/check_package_compliance.sh
+          fi
+
+  build-debs:
+    needs: compliance
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Build and install-check deb packages
+        run: |
+          .xgc2/scripts/build_debs_in_docker.sh \
+            --work-dir "$RUNNER_TEMP/xgc2-gazebo-sim-vrpn-bridge-${{ matrix.arch }}" \
+            --output-dir "$GITHUB_WORKSPACE/debs"
+
+      - name: Upload deb artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: xgc2-gazebo-sim-vrpn-bridge-debs-${{ matrix.arch }}
+          path: debs/*.deb
