@@ -15,7 +15,8 @@ if git ls-files | grep -E '(^|/)(build|devel|install|install-root|\.work|\.ci|de
 fi
 
 required_files=(
-  .github/workflows/build-debs.yml
+  .github/workflows/ci.yml
+  .github/workflows/release.yml
   .xgc2/product.yml
   .xgc2/scripts/build_debs_in_docker.sh
   .xgc2/scripts/check_installed_packages.sh
