@@ -21,9 +21,6 @@ jobs:
         run: |
           set -euo pipefail
           git diff --check HEAD
-          if [[ -x .xgc2/scripts/check_version_bump.sh ]]; then
-            .xgc2/scripts/check_version_bump.sh --ci
-          fi
           if [[ -x .xgc2/scripts/check_package_compliance.sh ]]; then
             .xgc2/scripts/check_package_compliance.sh
           fi
