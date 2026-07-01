@@ -1,0 +1,20 @@
+Checks: >
+  -*,
+  clang-analyzer-*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  performance-*,
+  -performance-enum-size,
+  portability-*,
+  modernize-loop-convert,
+  modernize-make-unique,
+  modernize-use-emplace,
+  modernize-use-nullptr,
+  modernize-use-override,
+  cppcoreguidelines-slicing,
+  cppcoreguidelines-virtual-class-destructor
+WarningsAsErrors: '*'
+HeaderFilterRegex: '^(gazebo_sim_vrpn_bridge/include|gazebo_sim_vrpn_bridge/src|gazebo_sim_vrpn_bridge/test)/.*'
+CheckOptions:
+  - key: bugprone-assert-side-effect.AssertMacros
+    value: 'assert'

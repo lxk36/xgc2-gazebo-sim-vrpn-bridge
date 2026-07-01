@@ -1,0 +1,87 @@
+name: build-debs
+
+on:
+  push:
+    branches:
+      - noetic
+  workflow_dispatch:
+    inputs:
+      publish_apt:
+        description: Publish built debs to the XGC2 APT repository
+        required: true
+        default: true
+        type: boolean
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  package-compliance:
+    name: Package compliance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check package metadata
+        run: |
+          git diff --check HEAD
+          .xgc2/scripts/check_version_bump.sh --ci
+          .xgc2/scripts/check_package_compliance.sh
+
+  build-debs:
+    name: Build debs (${{ matrix.arch }})
+    needs: package-compliance
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Build and install-check deb package in Docker
+        run: |
+          .xgc2/scripts/build_debs_in_docker.sh \
+            --work-dir "$RUNNER_TEMP/xgc2-gazebo-sim-vrpn-bridge-${{ matrix.arch }}" \
+            --output-dir "$GITHUB_WORKSPACE/debs"
+
+      - name: Upload deb artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: xgc2-gazebo-sim-vrpn-bridge-debs-${{ matrix.arch }}
+          path: debs/*.deb
+
+  publish-apt:
+    name: Publish APT
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish_apt)
+    needs: build-debs
+    runs-on: ubuntu-latest
+    env:
+      APT_REPO_HOST: ${{ secrets.APT_REPO_HOST }}
+      APT_REPO_PORT: ${{ secrets.APT_REPO_PORT }}
+      APT_REPO_USER: ${{ secrets.APT_REPO_USER }}
+      APT_REPO_SSH_KEY: ${{ secrets.APT_REPO_SSH_KEY }}
+      APT_REPO_KNOWN_HOSTS: ${{ secrets.APT_REPO_KNOWN_HOSTS }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download deb artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: xgc2-gazebo-sim-vrpn-bridge-debs-*
+          path: debs
+          merge-multiple: true
+
+      - name: Publish to self-hosted APT repository
+        if: ${{ env.APT_REPO_HOST != '' && env.APT_REPO_PORT != '' && env.APT_REPO_SSH_KEY != '' && env.APT_REPO_KNOWN_HOSTS != '' }}
+        run: .xgc2/scripts/publish_apt_repo.sh --deb-dir debs
