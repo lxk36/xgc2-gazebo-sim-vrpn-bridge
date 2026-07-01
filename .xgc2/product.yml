@@ -1,41 +1,41 @@
 schema: xgc2.product.v1
 id: xgc2-gazebo-sim-vrpn-bridge
 name: XGC2 Gazebo Sim VRPN Bridge
-version: 1.1.0-2
+version: 1.1.0-3
 kind: ros1-apt
 summary: Gazebo Classic model pose to VRPN tracker server bridge.
-
 ros:
   distro: noetic
   packages:
-    - gazebo_sim_vrpn_bridge
-
+  - gazebo_sim_vrpn_bridge
 apt:
   distribution: focal
   install:
-    - ros-noetic-xgc2-gazebo-sim-vrpn-bridge
+  - ros-noetic-xgc2-gazebo-sim-vrpn-bridge
   packages:
-    - ros-noetic-xgc2-gazebo-sim-vrpn-bridge
+  - ros-noetic-xgc2-gazebo-sim-vrpn-bridge
   depends:
-    - libxgc2-math-dev (>= 0.5.1-1)
-    - ros-noetic-gazebo-msgs
-    - ros-noetic-geometry-msgs
-    - ros-noetic-roscpp
-    - ros-noetic-tf2
-    - ros-noetic-tf2-ros
-    - ros-noetic-vrpn
-    - ros-noetic-vrpn-client-ros
-
+  - libxgc2-math-dev (>= 0.5.5-2)
+  - ros-noetic-gazebo-msgs
+  - ros-noetic-geometry-msgs
+  - ros-noetic-roscpp
+  - ros-noetic-tf2
+  - ros-noetic-tf2-ros
+  - ros-noetic-vrpn
+  - ros-noetic-vrpn-client-ros
 usage:
-  install: |
-    sudo apt update
+  install: 'sudo apt update
+
     sudo apt install ros-noetic-xgc2-gazebo-sim-vrpn-bridge
-  smoke_test: |
-    roslaunch --files gazebo_sim_vrpn_bridge vrpn_server.launch auto_track_known_models:=true
+
+    '
+  smoke_test: 'roslaunch --files gazebo_sim_vrpn_bridge vrpn_server.launch auto_track_known_models:=true
+
     roslaunch --files gazebo_sim_vrpn_bridge vrpn_client.launch trackers:=[uav1]
 
+    '
 ownership:
   paths:
-    - /opt/ros/noetic/share/gazebo_sim_vrpn_bridge
-    - /opt/ros/noetic/include/gazebo_sim_vrpn_bridge
-    - /opt/ros/noetic/lib/gazebo_sim_vrpn_bridge
+  - /opt/ros/noetic/share/gazebo_sim_vrpn_bridge
+  - /opt/ros/noetic/include/gazebo_sim_vrpn_bridge
+  - /opt/ros/noetic/lib/gazebo_sim_vrpn_bridge
