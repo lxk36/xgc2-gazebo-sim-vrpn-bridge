@@ -445,8 +445,7 @@ class GazeboVrpnServerNode {
     }
 
     static bool isSupportedNamespace(const std::string& value) {
-        return isNumberedNamespace(value, "ugv") || isNumberedNamespace(value, "uav") ||
-               isNumberedNamespace(value, "tello");
+        return isNumberedNamespace(value, "ugv") || isNumberedNamespace(value, "uav");
     }
 
     bool matchesPattern(const std::string& model_name, const std::string& pattern) const {

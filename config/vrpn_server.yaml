@@ -35,7 +35,6 @@ auto_mapping:
   include_patterns:
     - "^uav[0-9]+$"
     - "^ugv[0-9]+$"
-    - "^tello[0-9]+$"
 
 # New manual mapping path. Keys are Gazebo model names; values are VRPN tracker
 # names. This overrides auto_mapping and keeps nonstandard Gazebo names usable.
