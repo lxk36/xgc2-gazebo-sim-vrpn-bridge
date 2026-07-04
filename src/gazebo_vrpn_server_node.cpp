@@ -28,6 +28,7 @@
 #include <xgc2_math/filter/butterworth_filter.hpp>
 #include <xmlrpcpp/XmlRpcValue.h>
 
+#include "gazebo_sim_vrpn_bridge/measurement_delay.h"
 #include "gazebo_sim_vrpn_bridge/mocap_noise.h"
 
 namespace gazebo_sim_vrpn_bridge {
@@ -65,10 +66,12 @@ class GazeboVrpnServerNode {
         nh_private_.param<std::string>("match_mode", match_mode_, "contains");
         nh_private_.param<bool>("auto_track_known_models", auto_track_known_models_, false);
         loadConfig();
+        applyDelayOverrides();
         validateConfig();
         mocap_noise_config_.seed =
             mocap_noise_seed_param_ <= 0 ? 1 : static_cast<unsigned int>(mocap_noise_seed_param_);
         mocap_noise_ = MocapNoise(mocap_noise_config_);
+        measurement_delay_.reset(delay_config_);
 
         connection_ = vrpn_create_server_connection(port_, nullptr, nullptr,
                                                     bind_address_.empty() ? nullptr : bind_address_.c_str());
@@ -99,6 +102,9 @@ class GazeboVrpnServerNode {
                 << mocap_noise_config_.rotation_stddev_rad[0] << ", " << mocap_noise_config_.rotation_stddev_rad[1]
                 << ", " << mocap_noise_config_.rotation_stddev_rad[2] << "] rad, seed=" << mocap_noise_config_.seed);
         }
+        ROS_INFO_STREAM("[GazeboVrpnServerNode] Measurement delay is "
+                        << (delay_config_.enabled ? "enabled" : "disabled") << "; timestamp_policy="
+                        << delayTimestampPolicyName(delay_config_.timestamp_policy));
     }
 
     ~GazeboVrpnServerNode() {
@@ -194,6 +200,7 @@ class GazeboVrpnServerNode {
         ros::WallTime last_model_state_wall_time;
         double last_model_state_time_s{0.0};
         double last_derivative_dt_s{0.0};
+        TrackerSampleHistory history{4U};
         size_t model_index{0};
         bool have_pose{false};
         bool have_derivative_state{false};
@@ -223,6 +230,7 @@ class GazeboVrpnServerNode {
         model.tracker_name = tracker_name;
         model.body_to_tracker = bodyToTrackerFor(tracker_name);
         model.model_index = model_index;
+        model.history.reset(measurement_delay_.historyCapacityForTracker(tracker_name, publish_rate_hz_));
         model.tracker = std::make_unique<vrpn_Tracker_Server>(tracker_name.c_str(), connection_, 1);
 
         ROS_INFO_STREAM("[GazeboVrpnServerNode] Registered Gazebo model '" << gazebo_model_name << "' as VRPN tracker '"
@@ -247,12 +255,14 @@ class GazeboVrpnServerNode {
             model.latest_pose = transformToPose(world_tracker);
             model.last_model_state_wall_time = now;
             model.have_pose = true;
+            pushTrackerSample(model, now.toSec());
         }
     }
 
     void publishLatestPoses() {
-        struct timeval timestamp {};
-        gettimeofday(&timestamp, nullptr);
+        const ros::WallTime send_time = ros::WallTime::now();
+        const double send_time_s = send_time.toSec();
+        measurement_delay_.startPublishCycle(send_time_s);
 
         for (auto& entry : tracked_models_) {
             TrackedModel& model = entry.second;
@@ -260,13 +270,22 @@ class GazeboVrpnServerNode {
                 continue;
             }
 
-            const double age_s = (ros::WallTime::now() - model.last_model_state_wall_time).toSec();
+            const double age_s = (send_time - model.last_model_state_wall_time).toSec();
             if (age_s > stale_timeout_s_) {
                 ROS_WARN_THROTTLE(2.0, "[GazeboVrpnServerNode] Last Gazebo pose for '%s' is stale: %.3f s",
                                   model.gazebo_model_name.c_str(), age_s);
             }
 
-            const geometry_msgs::Pose measured_pose = mocap_noise_.apply(model.latest_pose);
+            const TrackerSample* sample = sampleForPublish(model, send_time_s);
+            if (sample == nullptr) {
+                continue;
+            }
+
+            const double timestamp_s =
+                timestampSecondsForPolicy(delay_config_.timestamp_policy, send_time_s, *sample);
+            const struct timeval timestamp = wallSecondsToTimeval(timestamp_s);
+
+            const geometry_msgs::Pose measured_pose = mocap_noise_.apply(sample->pose);
             const vrpn_float64 position[3] = {
                 measured_pose.position.x,
                 measured_pose.position.y,
@@ -285,38 +304,60 @@ class GazeboVrpnServerNode {
                                   model.tracker_name.c_str());
             }
 
-            if (model.have_velocity) {
+            if (sample->have_velocity) {
                 const vrpn_float64 linear_velocity[3] = {
-                    model.linear_velocity.x(),
-                    model.linear_velocity.y(),
-                    model.linear_velocity.z(),
+                    sample->linear_velocity.x(),
+                    sample->linear_velocity.y(),
+                    sample->linear_velocity.z(),
                 };
                 vrpn_float64 angular_velocity[4]{};
-                vectorRpyToQuaternion(model.angular_velocity, angular_velocity);
+                vectorRpyToQuaternion(sample->angular_velocity, angular_velocity);
                 const int velocity_status = model.tracker->report_pose_velocity(
-                    0, timestamp, linear_velocity, angular_velocity, reportInterval(model));
+                    0, timestamp, linear_velocity, angular_velocity, sample->report_interval_s);
                 if (velocity_status != 0) {
                     ROS_WARN_THROTTLE(2.0, "[GazeboVrpnServerNode] Failed to publish VRPN twist for '%s'",
                                       model.tracker_name.c_str());
                 }
             }
 
-            if (model.have_acceleration) {
+            if (sample->have_acceleration) {
                 const vrpn_float64 linear_acceleration[3] = {
-                    model.linear_acceleration.x(),
-                    model.linear_acceleration.y(),
-                    model.linear_acceleration.z(),
+                    sample->linear_acceleration.x(),
+                    sample->linear_acceleration.y(),
+                    sample->linear_acceleration.z(),
                 };
                 vrpn_float64 angular_acceleration[4]{};
-                vectorRpyToQuaternion(model.angular_acceleration, angular_acceleration);
+                vectorRpyToQuaternion(sample->angular_acceleration, angular_acceleration);
                 const int acceleration_status = model.tracker->report_pose_acceleration(
-                    0, timestamp, linear_acceleration, angular_acceleration, reportInterval(model));
+                    0, timestamp, linear_acceleration, angular_acceleration, sample->report_interval_s);
                 if (acceleration_status != 0) {
                     ROS_WARN_THROTTLE(2.0, "[GazeboVrpnServerNode] Failed to publish VRPN accel for '%s'",
                                       model.tracker_name.c_str());
                 }
             }
         }
+    }
+
+    void pushTrackerSample(TrackedModel& model, double wall_time_s) {
+        TrackerSample sample;
+        sample.wall_time_s = wall_time_s;
+        sample.pose = model.latest_pose;
+        sample.linear_velocity = model.linear_velocity;
+        sample.angular_velocity = model.angular_velocity;
+        sample.linear_acceleration = model.linear_acceleration;
+        sample.angular_acceleration = model.angular_acceleration;
+        sample.have_velocity = model.have_velocity;
+        sample.have_acceleration = model.have_acceleration;
+        sample.report_interval_s = reportInterval(model);
+        model.history.push(sample);
+    }
+
+    const TrackerSample* sampleForPublish(TrackedModel& model, double send_time_s) {
+        if (!delay_config_.enabled) {
+            return model.history.latest();
+        }
+        const double delay_s = measurement_delay_.delaySecondsForTracker(model.tracker_name, send_time_s);
+        return model.history.nearest(send_time_s - delay_s);
     }
 
     void updateDerivativeState(TrackedModel& model, const tf2::Transform& world_tracker,
@@ -428,6 +469,35 @@ class GazeboVrpnServerNode {
         quaternion[1] = q.y();
         quaternion[2] = q.z();
         quaternion[3] = q.w();
+    }
+
+    static struct timeval wallSecondsToTimeval(double wall_time_s) {
+        if (wall_time_s < 0.0) {
+            wall_time_s = 0.0;
+        }
+        const double whole_seconds = std::floor(wall_time_s);
+        struct timeval timestamp {};
+        timestamp.tv_sec = static_cast<time_t>(whole_seconds);
+        timestamp.tv_usec = static_cast<suseconds_t>(std::round((wall_time_s - whole_seconds) * 1000000.0));
+        if (timestamp.tv_usec >= 1000000) {
+            ++timestamp.tv_sec;
+            timestamp.tv_usec -= 1000000;
+        }
+        return timestamp;
+    }
+
+    static DelayTimestampPolicy parseDelayTimestampPolicy(const std::string& value) {
+        if (value == "send_time") {
+            return DelayTimestampPolicy::SendTime;
+        }
+        if (value == "sample_time") {
+            return DelayTimestampPolicy::SampleTime;
+        }
+        throw std::runtime_error("delay.timestamp_policy must be one of: send_time, sample_time");
+    }
+
+    static const char* delayTimestampPolicyName(DelayTimestampPolicy policy) {
+        return policy == DelayTimestampPolicy::SampleTime ? "sample_time" : "send_time";
     }
 
     double reportInterval(const TrackedModel& model) const {
@@ -582,6 +652,11 @@ class GazeboVrpnServerNode {
             parseMocapNoise(noise);
         }
 
+        XmlRpc::XmlRpcValue delay;
+        if (nh_private_.getParam("delay", delay)) {
+            parseDelay(delay);
+        }
+
         XmlRpc::XmlRpcValue auto_mapping;
         if (nh_private_.getParam("auto_mapping", auto_mapping)) {
             parseAutoMapping(auto_mapping);
@@ -620,6 +695,102 @@ class GazeboVrpnServerNode {
         }
         if (noise.hasMember("seed")) {
             mocap_noise_seed_param_ = static_cast<int>(xmlRpcToDouble(noise["seed"], "mocap_noise.seed"));
+        }
+    }
+
+    void parseDelay(XmlRpc::XmlRpcValue& delay) {
+        if (delay.getType() != XmlRpc::XmlRpcValue::TypeStruct) {
+            throw std::runtime_error("delay must be a YAML mapping");
+        }
+        if (delay.hasMember("enabled")) {
+            delay_config_.enabled = static_cast<bool>(delay["enabled"]);
+        }
+        if (delay.hasMember("timestamp_policy")) {
+            delay_config_.timestamp_policy =
+                parseDelayTimestampPolicy(static_cast<std::string>(delay["timestamp_policy"]));
+        }
+        if (delay.hasMember("seed")) {
+            delay_config_.seed = static_cast<unsigned int>(std::max(0.0, xmlRpcToDouble(delay["seed"], "delay.seed")));
+        }
+        if (delay.hasMember("max_delay_ms")) {
+            delay_config_.max_delay_ms = xmlRpcToDouble(delay["max_delay_ms"], "delay.max_delay_ms");
+        }
+        if (delay.hasMember("history_margin_ms")) {
+            delay_config_.history_margin_ms = xmlRpcToDouble(delay["history_margin_ms"], "delay.history_margin_ms");
+        }
+        if (delay.hasMember("common")) {
+            parseDelayComponent(delay["common"], "delay.common", delay_config_.common);
+        }
+        if (delay.hasMember("trackers")) {
+            parseDelayTrackers(delay["trackers"]);
+        }
+    }
+
+    void applyDelayOverrides() {
+        bool delay_enabled = false;
+        if (nh_private_.getParam("delay_enabled", delay_enabled)) {
+            delay_config_.enabled = delay_enabled;
+        }
+
+        std::string timestamp_policy;
+        if (nh_private_.getParam("delay_timestamp_policy", timestamp_policy)) {
+            delay_config_.timestamp_policy = parseDelayTimestampPolicy(timestamp_policy);
+        }
+
+        int delay_seed = 0;
+        if (nh_private_.getParam("delay_seed", delay_seed)) {
+            delay_config_.seed = static_cast<unsigned int>(std::max(delay_seed, 0));
+        }
+    }
+
+    void parseDelayTrackers(XmlRpc::XmlRpcValue& trackers) {
+        if (trackers.getType() != XmlRpc::XmlRpcValue::TypeStruct) {
+            throw std::runtime_error("delay.trackers must be a YAML mapping");
+        }
+        for (auto& tracker : trackers) {
+            const std::string tracker_name = trimSlashes(tracker.first);
+            if (tracker_name.empty()) {
+                continue;
+            }
+            if (tracker.second.getType() != XmlRpc::XmlRpcValue::TypeStruct) {
+                throw std::runtime_error("delay.trackers." + tracker_name + " must be a YAML mapping");
+            }
+            TrackerDelayConfig config;
+            DelayComponentConfig& component = config;
+            parseDelayComponent(tracker.second, "delay.trackers." + tracker_name, component);
+            if (tracker.second.hasMember("max_delay_ms")) {
+                config.max_delay_ms =
+                    xmlRpcToDouble(tracker.second["max_delay_ms"], "delay.trackers." + tracker_name + ".max_delay_ms");
+            }
+            delay_config_.trackers[tracker_name] = config;
+        }
+    }
+
+    void parseDelayComponent(XmlRpc::XmlRpcValue& value, const std::string& param_name,
+                             DelayComponentConfig& config) {
+        if (value.getType() != XmlRpc::XmlRpcValue::TypeStruct) {
+            throw std::runtime_error(param_name + " must be a YAML mapping");
+        }
+        if (value.hasMember("base_ms")) {
+            config.base_ms = xmlRpcToDouble(value["base_ms"], param_name + ".base_ms");
+        }
+        if (value.hasMember("slow_stddev_ms")) {
+            config.slow_stddev_ms = xmlRpcToDouble(value["slow_stddev_ms"], param_name + ".slow_stddev_ms");
+        }
+        if (value.hasMember("slow_tau_s")) {
+            config.slow_tau_s = xmlRpcToDouble(value["slow_tau_s"], param_name + ".slow_tau_s");
+        }
+        if (value.hasMember("jitter_stddev_ms")) {
+            config.jitter_stddev_ms = xmlRpcToDouble(value["jitter_stddev_ms"], param_name + ".jitter_stddev_ms");
+        }
+        if (value.hasMember("burst_probability")) {
+            config.burst_probability = xmlRpcToDouble(value["burst_probability"], param_name + ".burst_probability");
+        }
+        if (value.hasMember("burst_extra_ms")) {
+            const std::vector<double> burst_range =
+                parseDoubleVector(value["burst_extra_ms"], param_name + ".burst_extra_ms", 2);
+            config.burst_extra_min_ms = burst_range[0];
+            config.burst_extra_max_ms = burst_range[1];
         }
     }
 
@@ -758,6 +929,8 @@ class GazeboVrpnServerNode {
         if (port_ <= 0 || port_ > 65535) {
             throw std::runtime_error("port must be in range 1..65535");
         }
+        MeasurementDelay delay(delay_config_);
+        delay.validate(publish_rate_hz_);
     }
 
     static tf2::Transform parseTransform(XmlRpc::XmlRpcValue& value, const std::string& param_name) {
@@ -866,6 +1039,8 @@ class GazeboVrpnServerNode {
     tf2::Transform default_body_to_tracker_;
     MocapNoiseConfig mocap_noise_config_;
     MocapNoise mocap_noise_;
+    MeasurementDelayConfig delay_config_;
+    MeasurementDelay measurement_delay_;
     std::vector<std::string> tracker_patterns_;
     std::map<std::string, RobotConfig> robot_configs_;
     std::map<std::string, std::string> configured_model_to_tracker_;

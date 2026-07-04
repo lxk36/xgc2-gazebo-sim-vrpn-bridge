@@ -62,6 +62,7 @@ docker run --rm \
       git \
       libxgc2-math-dev \
       netbase \
+      python3-nose \
       rsync \
       ros-noetic-gazebo-msgs \
       ros-noetic-geometry-msgs \

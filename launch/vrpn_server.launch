@@ -13,6 +13,9 @@
     <arg name="derivative_reset_timeout" default=""/>
     <arg name="mocap_noise_enabled" default=""/>
     <arg name="mocap_noise_seed" default=""/>
+    <arg name="delay_enabled" default=""/>
+    <arg name="delay_timestamp_policy" default=""/>
+    <arg name="delay_seed" default=""/>
     <arg name="trackers" default=""/>
     <arg name="match_mode" default=""/>
     <arg name="auto_track_known_models" default=""/>
@@ -34,6 +37,9 @@
         <param if="$(eval arg('derivative_reset_timeout') != '')" name="derivative_reset_timeout" value="$(arg derivative_reset_timeout)"/>
         <param if="$(eval arg('mocap_noise_enabled') != '')" name="mocap_noise_enabled" value="$(arg mocap_noise_enabled)"/>
         <param if="$(eval arg('mocap_noise_seed') != '')" name="mocap_noise_seed" value="$(arg mocap_noise_seed)"/>
+        <param if="$(eval arg('delay_enabled') != '')" name="delay_enabled" value="$(arg delay_enabled)"/>
+        <param if="$(eval arg('delay_timestamp_policy') != '')" name="delay_timestamp_policy" value="$(arg delay_timestamp_policy)"/>
+        <param if="$(eval arg('delay_seed') != '')" name="delay_seed" value="$(arg delay_seed)"/>
         <param if="$(eval arg('trackers') != '')" name="trackers" value="$(arg trackers)"/>
         <param if="$(eval arg('match_mode') != '')" name="match_mode" value="$(arg match_mode)"/>
         <param if="$(eval arg('auto_track_known_models') != '')" name="auto_track_known_models" value="$(arg auto_track_known_models)"/>

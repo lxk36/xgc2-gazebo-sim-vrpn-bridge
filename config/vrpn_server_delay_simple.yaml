@@ -1,0 +1,46 @@
+# Simple explicit delay experiment config. The default vrpn_server.yaml does
+# not define delay parameters; use this file only when a fixed delay is needed.
+
+model_states_topic: /gazebo/model_states
+bind_address: ""
+port: 3883
+publish_rate: 120.0
+scan_interval: 2.0
+stale_timeout: 1.0
+velocity_filter_cutoff: 25.0
+acceleration_filter_cutoff: 25.0
+derivative_reset_timeout: 0.5
+match_mode: contains
+auto_track_known_models: false
+
+mocap_noise:
+  enabled: true
+  position_stddev_xyz: [1.0e-7, 1.0e-7, 1.0e-7]
+  rotation_stddev_rpy: [0.0, 0.0, 0.0]
+  seed: 1
+
+delay:
+  enabled: true
+  timestamp_policy: send_time
+  seed: 1
+  max_delay_ms: 30.0
+  history_margin_ms: 20.0
+  common:
+    base_ms: 15.0
+
+trackers: []
+
+auto_mapping:
+  enabled: false
+  include_patterns:
+    - "^uav[0-9]+$"
+    - "^ugv[0-9]+$"
+
+manual_mapping: {}
+
+default_body_to_tracker:
+  xyz: [0.0, 0.0, 0.0]
+  rpy: [0.0, 0.0, 0.0]
+
+extrinsics: {}
+robots: {}

@@ -1,0 +1,61 @@
+<launch>
+  <node pkg="gazebo_sim_vrpn_bridge"
+        type="gazebo_vrpn_server_node"
+        name="gazebo_vrpn_server"
+        output="screen">
+    <param name="model_states_topic" value="/test/delay/model_states"/>
+    <param name="port" value="3984"/>
+    <param name="publish_rate" value="120.0"/>
+    <param name="scan_interval" value="0.02"/>
+    <param name="stale_timeout" value="2.0"/>
+    <param name="auto_track_known_models" value="false"/>
+    <rosparam param="manual_mapping">
+      source_fast: uav1
+      source_delayed: uav2
+    </rosparam>
+    <rosparam param="mocap_noise">
+      enabled: false
+      position_stddev_xyz: [0.0, 0.0, 0.0]
+      rotation_stddev_rpy: [0.0, 0.0, 0.0]
+      seed: 1
+    </rosparam>
+    <rosparam param="delay">
+      enabled: true
+      timestamp_policy: sample_time
+      seed: 1
+      max_delay_ms: 30.0
+      history_margin_ms: 20.0
+      common:
+        base_ms: 0.0
+      trackers:
+        uav1:
+          max_delay_ms: 0.0
+        uav2:
+          base_ms: 30.0
+          max_delay_ms: 30.0
+    </rosparam>
+  </node>
+
+  <group ns="delay_client">
+    <node pkg="vrpn_client_ros"
+          type="vrpn_client_node"
+          name="vrpn_client_node"
+          output="screen">
+      <rosparam>
+        server: 127.0.0.1
+        port: 3984
+        update_frequency: 120.0
+        frame_id: world
+        use_server_time: true
+        broadcast_tf: false
+        refresh_tracker_frequency: 0.0
+        trackers: [uav1, uav2]
+      </rosparam>
+    </node>
+  </group>
+
+  <test test-name="gazebo_sim_vrpn_delay_e2e"
+        pkg="gazebo_sim_vrpn_bridge"
+        type="vrpn_delay_e2e.py"
+        time-limit="35"/>
+</launch>
