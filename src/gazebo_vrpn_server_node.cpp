@@ -4,6 +4,7 @@
 #include <array>
 #include <atomic>
 #include <cctype>
+#include <cstdint>
 #include <cmath>
 #include <csignal>
 #include <iterator>
@@ -112,6 +113,7 @@ class GazeboVrpnServerNode {
         ros::WallRate rate(publish_rate_hz_);
         while (ros::ok() && !g_shutdown_requested.load(std::memory_order_relaxed)) {
             ros::spinOnce();
+            processLatestModelStates();
             publishLatestPoses();
             for (auto& entry : tracked_models_) {
                 entry.second.tracker->mainloop();
@@ -129,6 +131,20 @@ class GazeboVrpnServerNode {
         }
 
         const ros::WallTime now = ros::WallTime::now();
+        latest_model_states_msg_ = msg;
+        latest_model_states_wall_time_ = now;
+        ++latest_model_states_sequence_;
+    }
+
+    void processLatestModelStates() {
+        if (!latest_model_states_msg_ || latest_model_states_sequence_ == processed_model_states_sequence_) {
+            return;
+        }
+
+        const gazebo_msgs::ModelStates::ConstPtr msg = latest_model_states_msg_;
+        const ros::WallTime now = latest_model_states_wall_time_;
+        processed_model_states_sequence_ = latest_model_states_sequence_;
+
         if (shouldScan(now)) {
             scanModelList(*msg, now);
         }
@@ -841,6 +857,10 @@ class GazeboVrpnServerNode {
     bool auto_track_known_models_{false};
     std::vector<std::string> auto_include_patterns_;
     ros::WallTime last_scan_wall_time_;
+    gazebo_msgs::ModelStates::ConstPtr latest_model_states_msg_;
+    ros::WallTime latest_model_states_wall_time_;
+    std::uint64_t latest_model_states_sequence_{0};
+    std::uint64_t processed_model_states_sequence_{0};
 
     vrpn_Connection* connection_{nullptr};
     tf2::Transform default_body_to_tracker_;
