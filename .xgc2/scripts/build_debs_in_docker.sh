@@ -55,7 +55,7 @@ docker run --rm \
       > /etc/apt/sources.list.d/xgc2.list
 
       if [[ -n "${XGC2_APT_OVERLAY_URL:-}" ]]; then
-        sed "s#https://xgc2.apt.xiaokang.ink#${XGC2_APT_OVERLAY_URL%/}#g; s#${XGC2_APT_BASE_URL:-https://xgc2.apt.xiaokang.ink}#${XGC2_APT_OVERLAY_URL%/}#g" \
+        sed "s#${XGC2_APT_BASE_URL:-https://xgc2.apt.xiaokang.ink}#${XGC2_APT_OVERLAY_URL%/}#g" \
           /etc/apt/sources.list.d/xgc2.list \
           > /etc/apt/sources.list.d/00-xgc2-release-train.list
       fi
