@@ -83,7 +83,7 @@ docker run --rm \
       ros-noetic-tf2-ros \
       ros-noetic-vrpn \
       ros-noetic-vrpn-client-ros
-    dpkg --compare-versions "$(dpkg-query -W -f="\${Version}" libxgc2-math-dev)" ge '0.5.6-5~focal'
+    dpkg --compare-versions "$(dpkg-query -W -f="\${Version}" libxgc2-math-dev)" ge '0.5.6-6~focal'
 
     rm -rf /workspace/work/src /workspace/work/build /workspace/work/devel /workspace/work/install-root
     mkdir -p /workspace/work/src/xgc2-gazebo-sim-vrpn-bridge
@@ -105,7 +105,7 @@ docker run --rm \
     if [[ "${INSTALL_CHECK}" == "true" ]]; then
       apt-get install -y /workspace/out/ros-noetic-xgc2-gazebo-sim-vrpn-bridge_*.deb
       dpkg-deb -f /workspace/out/ros-noetic-xgc2-gazebo-sim-vrpn-bridge_*.deb Depends \
-        | grep -F "libxgc2-math-dev (>= 0.5.6-5~focal)" >/dev/null
+        | grep -F "libxgc2-math-dev (>= 0.5.6-6~focal)" >/dev/null
       /workspace/repo/.xgc2/scripts/check_installed_packages.sh
     fi
   '
