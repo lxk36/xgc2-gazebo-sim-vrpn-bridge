@@ -26,6 +26,25 @@ on:
         required: true
         default: false
         type: boolean
+      release_id:
+        description: Parent orchestrator run id used for correlation and audit
+        required: false
+        default: ""
+        type: string
+      release_lock_digest:
+        description: SHA256 of the immutable release lock
+        required: false
+        default: ""
+        type: string
+      trusted_ci_run_id:
+        description: Exact successful push CI run whose trusted deb artifacts may be reused
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  actions: read
+  contents: read
 
 defaults:
   run:
@@ -82,9 +101,7 @@ jobs:
           fi
 
   build-debs:
-    needs:
-      - validate-release-inputs
-      - release-checks
+    needs: validate-release-inputs
     strategy:
       fail-fast: false
       matrix:
@@ -97,27 +114,78 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Download trusted CI artifacts
+        if: ${{ inputs.trusted_ci_run_id != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.trusted_ci_run_id }}
+          name: xgc2-gazebo-sim-vrpn-bridge-debs-${{ matrix.arch }}
+          path: trusted
+
+      - name: Verify and stage trusted CI artifacts
+        if: ${{ inputs.trusted_ci_run_id != '' }}
+        run: |
+          python3 .xgc2/scripts/xgc2_artifact_manifest.py verify-build \
+            --artifact-dir trusted \
+            --deb-output-dir debs \
+            --manifest-output-dir build-manifests \
+            --product xgc2-gazebo-sim-vrpn-bridge \
+            --product-version "${{ inputs.expected_version }}" \
+            --distribution focal \
+            --architecture "${{ matrix.arch }}" \
+            --source-sha "${{ inputs.expected_source_sha }}" \
+            --ci-run-id "${{ inputs.trusted_ci_run_id }}"
+
       - name: Build and install-check deb packages
+        if: ${{ inputs.trusted_ci_run_id == '' }}
         run: |
           .xgc2/scripts/build_debs_in_docker.sh \
             --work-dir "$RUNNER_TEMP/xgc2-gazebo-sim-vrpn-bridge-${{ matrix.arch }}" \
             --output-dir "$GITHUB_WORKSPACE/debs"
 
+      - name: Create fallback build manifest
+        if: ${{ inputs.trusted_ci_run_id == '' }}
+        run: |
+          python3 .xgc2/scripts/xgc2_artifact_manifest.py build \
+            --deb-dir debs \
+            --output-dir build-manifests \
+            --product xgc2-gazebo-sim-vrpn-bridge \
+            --product-version "${{ inputs.expected_version }}" \
+            --distribution focal \
+            --architecture "${{ matrix.arch }}" \
+            --source-sha "${{ inputs.expected_source_sha }}" \
+            --ci-run-id "$GITHUB_RUN_ID" \
+            --ci-workflow "$GITHUB_WORKFLOW" \
+            --ci-workflow-ref "$GITHUB_WORKFLOW_REF"
+
       - name: Upload deb artifacts
         uses: actions/upload-artifact@v4
         with:
           name: xgc2-gazebo-sim-vrpn-bridge-release-debs-${{ matrix.arch }}
-          path: debs/*.deb
+          path: |
+            debs/*.deb
+            build-manifests/*.json
+          retention-days: 14
+          include-hidden-files: true
 
   publish-apt:
-    if: ${{ inputs.publish_apt }}
-    needs: build-debs
+    if: ${{ always() && inputs.publish_apt && needs.validate-release-inputs.result == 'success' && needs.release-checks.result == 'success' && needs.build-debs.result == 'success' }}
+    needs:
+      - validate-release-inputs
+      - release-checks
+      - build-debs
     runs-on: ubuntu-latest
+    concurrency:
+      group: xgc2-apt-focal
+      cancel-in-progress: false
     env:
       APT_REPO_HOST: ${{ secrets.APT_REPO_HOST }}
       APT_REPO_PORT: ${{ secrets.APT_REPO_PORT }}
       APT_REPO_SSH_KEY: ${{ secrets.APT_REPO_SSH_KEY }}
       APT_REPO_KNOWN_HOSTS: ${{ secrets.APT_REPO_KNOWN_HOSTS }}
+      APT_REPO_DISTRIBUTION: focal
     steps:
       - uses: actions/checkout@v4
 
@@ -125,8 +193,31 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: xgc2-gazebo-sim-vrpn-bridge-release-debs-*
-          path: debs
+          path: release-input
           merge-multiple: true
+
+      - name: Validate artifacts and create release manifests
+        run: |
+          python3 .xgc2/scripts/xgc2_artifact_manifest.py verify-build \
+            --artifact-dir release-input \
+            --deb-output-dir staged/debs \
+            --manifest-output-dir staged/build-manifests \
+            --product xgc2-gazebo-sim-vrpn-bridge \
+            --product-version "${{ inputs.expected_version }}" \
+            --distribution focal \
+            --source-sha "${{ inputs.expected_source_sha }}"
+          python3 .xgc2/scripts/xgc2_artifact_manifest.py release \
+            --deb-dir staged/debs \
+            --build-manifest-dir staged/build-manifests \
+            --publish-dir publish \
+            --product xgc2-gazebo-sim-vrpn-bridge \
+            --product-version "${{ inputs.expected_version }}" \
+            --distribution focal \
+            --source-sha "${{ inputs.expected_source_sha }}" \
+            --release-id "${{ inputs.release_id || github.run_id }}" \
+            --release-lock-digest "${{ inputs.release_lock_digest }}" \
+            --target-architecture amd64 \
+            --target-architecture arm64
 
       - name: Publish to self-hosted APT repository
         run: |
@@ -135,4 +226,4 @@ jobs:
           test -n "${APT_REPO_SSH_KEY}"
           test -n "${APT_REPO_KNOWN_HOSTS}"
           export APT_REPO_PORT="${APT_REPO_PORT:-22}"
-          .xgc2/scripts/publish_apt_repo.sh --deb-dir debs
+          .xgc2/scripts/publish_apt_repo.sh --deb-dir publish

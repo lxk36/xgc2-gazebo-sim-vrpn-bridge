@@ -46,8 +46,27 @@ jobs:
             --work-dir "$RUNNER_TEMP/xgc2-gazebo-sim-vrpn-bridge-${{ matrix.arch }}" \
             --output-dir "$GITHUB_WORKSPACE/debs"
 
+      - name: Create trusted build manifest
+        run: |
+          product_version="$(awk -F': *' '/^version:/ {print $2; exit}' .xgc2/product.yml)"
+          python3 .xgc2/scripts/xgc2_artifact_manifest.py build \
+            --deb-dir debs \
+            --output-dir build-manifests \
+            --product xgc2-gazebo-sim-vrpn-bridge \
+            --product-version "$product_version" \
+            --distribution focal \
+            --architecture "${{ matrix.arch }}" \
+            --source-sha "$GITHUB_SHA" \
+            --ci-run-id "$GITHUB_RUN_ID" \
+            --ci-workflow "$GITHUB_WORKFLOW" \
+            --ci-workflow-ref "$GITHUB_WORKFLOW_REF"
+
       - name: Upload deb artifacts
         uses: actions/upload-artifact@v4
         with:
           name: xgc2-gazebo-sim-vrpn-bridge-debs-${{ matrix.arch }}
-          path: debs/*.deb
+          path: |
+            debs/*.deb
+            build-manifests/*.json
+          retention-days: 14
+          include-hidden-files: true
