@@ -64,8 +64,8 @@ class GazeboVrpnServerNode {
         nh_private_.param<bool>("mocap_noise_enabled", mocap_noise_config_.enabled, mocap_noise_config_.enabled);
         nh_private_.param<int>("mocap_noise_seed", mocap_noise_seed_param_, static_cast<int>(mocap_noise_config_.seed));
         nh_private_.param<std::string>("match_mode", match_mode_, "contains");
-        nh_private_.param<bool>("auto_track_known_models", auto_track_known_models_, false);
         loadConfig();
+        applyAutoMappingOverrides();
         applyDelayOverrides();
         validateConfig();
         mocap_noise_config_.seed =
@@ -803,6 +803,17 @@ class GazeboVrpnServerNode {
         }
         if (auto_mapping.hasMember("include_patterns")) {
             auto_include_patterns_ = parseStringList(auto_mapping["include_patterns"], "auto_mapping.include_patterns");
+        }
+    }
+
+    void applyAutoMappingOverrides() {
+        // Trusted launchers load the YAML document first and then set explicit
+        // private parameters. Keep that precedence here as well: the legacy
+        // top-level switch must win over auto_mapping.enabled from the loaded
+        // document instead of being overwritten while parsing it.
+        bool auto_track_known_models = false;
+        if (nh_private_.getParam("auto_track_known_models", auto_track_known_models)) {
+            auto_track_known_models_ = auto_track_known_models;
         }
     }
 

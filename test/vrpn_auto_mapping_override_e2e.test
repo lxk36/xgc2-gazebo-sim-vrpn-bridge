@@ -1,0 +1,43 @@
+<launch>
+  <node pkg="gazebo_sim_vrpn_bridge"
+        type="gazebo_vrpn_server_node"
+        name="gazebo_vrpn_server"
+        output="screen">
+    <rosparam file="$(find gazebo_sim_vrpn_bridge)/config/vrpn_server.yaml" command="load"/>
+    <param name="model_states_topic" value="/test/auto_mapping/model_states"/>
+    <param name="port" value="3985"/>
+    <param name="publish_rate" value="120.0"/>
+    <param name="scan_interval" value="0.02"/>
+    <param name="stale_timeout" value="2.0"/>
+    <param name="auto_track_known_models" value="true"/>
+    <rosparam param="mocap_noise">
+      enabled: false
+      position_stddev_xyz: [0.0, 0.0, 0.0]
+      rotation_stddev_rpy: [0.0, 0.0, 0.0]
+      seed: 1
+    </rosparam>
+  </node>
+
+  <group ns="auto_mapping_client">
+    <node pkg="vrpn_client_ros"
+          type="vrpn_client_node"
+          name="vrpn_client_node"
+          output="screen">
+      <rosparam>
+        server: 127.0.0.1
+        port: 3985
+        update_frequency: 120.0
+        frame_id: world
+        use_server_time: false
+        broadcast_tf: false
+        refresh_tracker_frequency: 0.0
+        trackers: [uav1]
+      </rosparam>
+    </node>
+  </group>
+
+  <test test-name="gazebo_sim_vrpn_auto_mapping_override_e2e"
+        pkg="gazebo_sim_vrpn_bridge"
+        type="vrpn_auto_mapping_override_e2e.py"
+        time-limit="25"/>
+</launch>
