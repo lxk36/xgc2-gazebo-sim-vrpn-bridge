@@ -1,0 +1,457 @@
+{
+  "apiVersion": "xgc.execution.process/v1",
+  "definitions": [
+    {
+      "id": "gazebo-vrpn-server",
+      "version": "2.2.0",
+      "label": "Gazebo VRPN server",
+      "description": "Direct Gazebo-backed VRPN tracking server; no roslaunch wrapper.",
+      "drivers": [
+        "host"
+      ],
+      "parameters": {
+        "properties": {
+          "accelerationFilterCutoff": {
+            "type": "number",
+            "default": 25,
+            "minimum": 0
+          },
+          "autoTrackKnownModels": {
+            "type": "boolean",
+            "description": "Automatically expose known Gazebo robot model names as trackers",
+            "default": true
+          },
+          "bindAddress": {
+            "type": "string",
+            "description": "VRPN bind address",
+            "default": "127.0.0.1"
+          },
+          "derivativeResetTimeout": {
+            "type": "number",
+            "default": 0.5,
+            "minimum": 0.01
+          },
+          "matchMode": {
+            "type": "string",
+            "default": "contains",
+            "enum": [
+              "contains",
+              "exact",
+              "regex"
+            ]
+          },
+          "modelStatesTopic": {
+            "type": "string",
+            "default": "/gazebo/model_states"
+          },
+          "namespace": {
+            "type": "string",
+            "description": "VRPN server runs in the global ROS namespace",
+            "default": "",
+            "fixedOnly": true
+          },
+          "port": {
+            "type": "integer",
+            "default": 3884,
+            "minimum": 1,
+            "maximum": 65535
+          },
+          "publishRate": {
+            "type": "number",
+            "default": 120,
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "rosMasterPort": {
+            "type": "integer",
+            "default": 11311,
+            "minimum": 1,
+            "maximum": 65535
+          },
+          "rosRuntimePrefix": {
+            "type": "string",
+            "description": "Trusted ROS runtime",
+            "default": "/opt/ros/noetic",
+            "fixedOnly": true,
+            "x-xgc-path-kind": "directory"
+          },
+          "scanInterval": {
+            "type": "number",
+            "default": 2,
+            "minimum": 0.1
+          },
+          "staleTimeout": {
+            "type": "number",
+            "default": 1,
+            "minimum": 0.1
+          },
+          "velocityFilterCutoff": {
+            "type": "number",
+            "default": 25,
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "resourceClaims": [
+        {
+          "bindingKey": "vrpn",
+          "kind": "tcp-listener",
+          "mode": "",
+          "capacity": 0,
+          "addressParameter": "bindAddress",
+          "portParameter": "port"
+        },
+        {
+          "bindingKey": "ros-node",
+          "kind": "custom",
+          "mode": "",
+          "capacity": 0,
+          "namespace": "ros-node",
+          "identityParts": [
+            {
+              "parameter": "rosMasterPort"
+            },
+            {
+              "literal": "/gazebo_vrpn_server"
+            }
+          ]
+        }
+      ],
+      "command": {
+        "executable": "/usr/bin/python3",
+        "args": [
+          "-c",
+          "\nimport os\nimport subprocess\nimport sys\n\nexecutable, namespace, node_name, config_files, *settings = sys.argv[1:]\nnamespace = namespace.strip(\"/\")\nif not node_name:\n    raise SystemExit(\"ROS node name is required\")\nprivate_namespace = \"/\" + \"/\".join(filter(None, (namespace, node_name)))\nrosparam = \"/opt/ros/noetic/bin/rosparam\"\nsubprocess.run([rosparam, \"delete\", private_namespace], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)\nfor config_file in filter(None, config_files.split(\",\")):\n    subprocess.run([rosparam, \"load\", config_file, private_namespace], check=True)\nfor setting in settings:\n    key, separator, value = setting.partition(\"=\")\n    if not separator or not key:\n        raise SystemExit(\"invalid trusted ROS parameter setting \" + repr(setting))\n    subprocess.run([rosparam, \"set\", private_namespace + \"/\" + key, value], check=True)\narguments = [executable, \"__name:=\" + node_name]\nif namespace:\n    arguments.append(\"__ns:=/\" + namespace)\nos.execv(executable, arguments)\n",
+          "/opt/ros/noetic/lib/gazebo_sim_vrpn_bridge/gazebo_vrpn_server_node",
+          "${namespace}",
+          "gazebo_vrpn_server",
+          "/opt/ros/noetic/share/gazebo_sim_vrpn_bridge/config/vrpn_server.yaml",
+          "model_states_topic=${modelStatesTopic}",
+          "bind_address=${bindAddress}",
+          "port=${port}",
+          "publish_rate=${publishRate}",
+          "scan_interval=${scanInterval}",
+          "stale_timeout=${staleTimeout}",
+          "velocity_filter_cutoff=${velocityFilterCutoff}",
+          "acceleration_filter_cutoff=${accelerationFilterCutoff}",
+          "derivative_reset_timeout=${derivativeResetTimeout}",
+          "match_mode=${matchMode}",
+          "auto_track_known_models=${autoTrackKnownModels}"
+        ],
+        "env": {
+          "CMAKE_PREFIX_PATH": "${rosRuntimePrefix}:/opt/ros/noetic",
+          "LD_LIBRARY_PATH": "${rosRuntimePrefix}/lib:/opt/ros/noetic/lib:/opt/ros/noetic/lib/x86_64-linux-gnu",
+          "PATH": "${rosRuntimePrefix}/bin:/opt/ros/noetic/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "PYTHONPATH": "${rosRuntimePrefix}/lib/python3/dist-packages:/opt/ros/noetic/lib/python3/dist-packages",
+          "ROS_DISTRO": "noetic",
+          "ROS_ETC_DIR": "/opt/ros/noetic/etc/ros",
+          "ROS_IP": "127.0.0.1",
+          "ROS_MASTER_URI": "http://127.0.0.1:${rosMasterPort}",
+          "ROS_PACKAGE_PATH": "${rosRuntimePrefix}/share:/opt/ros/noetic/share",
+          "ROS_PYTHON_VERSION": "3",
+          "ROS_ROOT": "/opt/ros/noetic/share/ros",
+          "ROS_VERSION": "1"
+        }
+      },
+      "readiness": {
+        "kind": "tcp",
+        "address": "127.0.0.1:${port}",
+        "command": {
+          "executable": ""
+        },
+        "interval": 1000000000,
+        "timeout": 1000000000,
+        "successThreshold": 1,
+        "failureThreshold": 3
+      },
+      "liveness": {
+        "kind": "exec",
+        "command": {
+          "executable": "/opt/ros/noetic/bin/rosnode",
+          "args": [
+            "info",
+            "/gazebo_vrpn_server"
+          ],
+          "env": {
+            "CMAKE_PREFIX_PATH": "/opt/ros/noetic",
+            "LD_LIBRARY_PATH": "/opt/ros/noetic/lib:/opt/ros/noetic/lib/x86_64-linux-gnu:/opt/ros/noetic/lib/aarch64-linux-gnu",
+            "PATH": "/opt/ros/noetic/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            "PKG_CONFIG_PATH": "/opt/ros/noetic/lib/pkgconfig",
+            "PYTHONPATH": "/opt/ros/noetic/lib/python3/dist-packages",
+            "ROS_DISTRO": "noetic",
+            "ROS_ETC_DIR": "/opt/ros/noetic/etc/ros",
+            "ROS_MASTER_URI": "http://127.0.0.1:${rosMasterPort}",
+            "ROS_PACKAGE_PATH": "/opt/ros/noetic/share",
+            "ROS_PYTHON_VERSION": "3",
+            "ROS_ROOT": "/opt/ros/noetic/share/ros",
+            "ROS_VERSION": "1"
+          }
+        },
+        "interval": 1000000000,
+        "timeout": 2000000000,
+        "successThreshold": 1,
+        "failureThreshold": 3
+      },
+      "stop": {
+        "gracePeriod": 8000000000
+      },
+      "restart": {
+        "mode": "never",
+        "maxRestarts": 0,
+        "backoff": 0
+      },
+      "digest": ""
+    },
+    {
+      "id": "vrpn-server",
+      "version": "1.2.0",
+      "label": "VRPN server",
+      "description": "VRPN device and tracking server using a trusted configuration file.",
+      "drivers": [
+        "host",
+        "docker"
+      ],
+      "parameters": {
+        "properties": {
+          "config": {
+            "type": "string",
+            "description": "Absolute path to the VRPN server configuration",
+            "default": "/opt/ros/noetic/etc/vrpn.cfg",
+            "x-xgc-path-kind": "file"
+          },
+          "port": {
+            "type": "integer",
+            "description": "VRPN TCP port",
+            "default": 3883,
+            "minimum": 1,
+            "maximum": 65535
+          }
+        },
+        "additionalProperties": false
+      },
+      "resourceClaims": [
+        {
+          "bindingKey": "vrpn",
+          "kind": "tcp-listener",
+          "mode": "",
+          "capacity": 0,
+          "address": "0.0.0.0",
+          "portParameter": "port"
+        }
+      ],
+      "command": {
+        "executable": "/opt/ros/noetic/bin/vrpn_server",
+        "args": [
+          "-f",
+          "${config}",
+          "${port}"
+        ],
+        "env": {
+          "CMAKE_PREFIX_PATH": "/opt/ros/noetic",
+          "LD_LIBRARY_PATH": "/opt/ros/noetic/lib:/opt/ros/noetic/lib/x86_64-linux-gnu:/opt/ros/noetic/lib/aarch64-linux-gnu",
+          "PATH": "/opt/ros/noetic/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "PKG_CONFIG_PATH": "/opt/ros/noetic/lib/pkgconfig",
+          "PYTHONPATH": "/opt/ros/noetic/lib/python3/dist-packages",
+          "ROS_DISTRO": "noetic",
+          "ROS_ETC_DIR": "/opt/ros/noetic/etc/ros",
+          "ROS_PACKAGE_PATH": "/opt/ros/noetic/share",
+          "ROS_PYTHON_VERSION": "3",
+          "ROS_ROOT": "/opt/ros/noetic/share/ros",
+          "ROS_VERSION": "1"
+        }
+      },
+      "readiness": {
+        "kind": "tcp",
+        "address": "127.0.0.1:${port}",
+        "command": {
+          "executable": ""
+        },
+        "interval": 1000000000,
+        "timeout": 1000000000,
+        "successThreshold": 1,
+        "failureThreshold": 3
+      },
+      "liveness": {
+        "kind": "tcp",
+        "address": "127.0.0.1:${port}",
+        "command": {
+          "executable": ""
+        },
+        "interval": 1000000000,
+        "timeout": 1000000000,
+        "successThreshold": 1,
+        "failureThreshold": 3
+      },
+      "stop": {
+        "gracePeriod": 3000000000
+      },
+      "restart": {
+        "mode": "never",
+        "maxRestarts": 0,
+        "backoff": 0
+      },
+      "digest": ""
+    },
+    {
+      "id": "vrpn-client-ros1",
+      "version": "1.2.0",
+      "label": "VRPN client (ROS1)",
+      "description": "ROS1 VRPN client that publishes discovered tracker poses into the ROS graph.",
+      "drivers": [
+        "host"
+      ],
+      "parameters": {
+        "properties": {
+          "broadcastTf": {
+            "type": "boolean",
+            "description": "Broadcast tracker transforms over ROS TF",
+            "default": true
+          },
+          "frameId": {
+            "type": "string",
+            "description": "Frame ID assigned to tracker messages",
+            "default": "world"
+          },
+          "refreshFrequencyHz": {
+            "type": "number",
+            "description": "Tracker discovery frequency in Hz",
+            "default": 1,
+            "minimum": 0.1
+          },
+          "rosHostname": {
+            "type": "string",
+            "description": "Optional ROS_HOSTNAME advertised by this host",
+            "default": ""
+          },
+          "rosInstallPath": {
+            "type": "string",
+            "description": "Absolute ROS installation prefix",
+            "default": "/opt/ros/noetic",
+            "x-xgc-path-kind": "directory"
+          },
+          "rosIp": {
+            "type": "string",
+            "description": "Optional ROS_IP advertised by this host",
+            "default": ""
+          },
+          "rosMasterUri": {
+            "type": "string",
+            "description": "ROS_MASTER_URI used by the client",
+            "default": "http://127.0.0.1:11311"
+          },
+          "rosNodeName": {
+            "type": "string",
+            "description": "Absolute ROS graph name for the client",
+            "default": "/vrpn_client_node"
+          },
+          "serverHost": {
+            "type": "string",
+            "description": "VRPN server host name or IP address",
+            "default": "localhost"
+          },
+          "serverPort": {
+            "type": "integer",
+            "description": "VRPN server TCP port",
+            "default": 3883,
+            "minimum": 1,
+            "maximum": 65535
+          },
+          "updateFrequencyHz": {
+            "type": "number",
+            "description": "Tracker update frequency in Hz",
+            "default": 100,
+            "minimum": 0.1
+          },
+          "useServerTime": {
+            "type": "boolean",
+            "description": "Use timestamps supplied by the VRPN server",
+            "default": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "resourceClaims": [
+        {
+          "bindingKey": "ros-node",
+          "kind": "custom",
+          "mode": "",
+          "capacity": 0,
+          "namespace": "ros-node",
+          "identityParts": [
+            {
+              "parameter": "rosMasterUri"
+            },
+            {
+              "parameter": "rosNodeName"
+            }
+          ]
+        }
+      ],
+      "command": {
+        "executable": "${rosInstallPath}/lib/vrpn_client_ros/vrpn_client_node",
+        "args": [
+          "__name:=${rosNodeName}",
+          "_server:=${serverHost}",
+          "_port:=${serverPort}",
+          "_update_frequency:=${updateFrequencyHz}",
+          "_refresh_tracker_frequency:=${refreshFrequencyHz}",
+          "_frame_id:=${frameId}",
+          "_use_server_time:=${useServerTime}",
+          "_broadcast_tf:=${broadcastTf}"
+        ],
+        "directExecutable": true,
+        "env": {
+          "CMAKE_PREFIX_PATH": "${rosInstallPath}",
+          "LD_LIBRARY_PATH": "${rosInstallPath}/lib:${rosInstallPath}/lib/x86_64-linux-gnu:${rosInstallPath}/lib/aarch64-linux-gnu",
+          "PATH": "${rosInstallPath}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "PKG_CONFIG_PATH": "${rosInstallPath}/lib/pkgconfig",
+          "PYTHONPATH": "${rosInstallPath}/lib/python3/dist-packages",
+          "ROS_DISTRO": "noetic",
+          "ROS_ETC_DIR": "${rosInstallPath}/etc/ros",
+          "ROS_HOSTNAME": "${rosHostname}",
+          "ROS_IP": "${rosIp}",
+          "ROS_LOG_DIR": "/tmp/xgc2/ros/log",
+          "ROS_MASTER_URI": "${rosMasterUri}",
+          "ROS_PACKAGE_PATH": "${rosInstallPath}/share",
+          "ROS_PYTHON_VERSION": "3",
+          "ROS_ROOT": "${rosInstallPath}/share/ros",
+          "ROS_VERSION": "1"
+        }
+      },
+      "readiness": {
+        "kind": "ros1-node",
+        "address": "${rosMasterUri}",
+        "node": "${rosNodeName}",
+        "command": {
+          "executable": ""
+        },
+        "interval": 1000000000,
+        "timeout": 2000000000,
+        "successThreshold": 1,
+        "failureThreshold": 3
+      },
+      "liveness": {
+        "kind": "ros1-node",
+        "address": "${rosMasterUri}",
+        "node": "${rosNodeName}",
+        "command": {
+          "executable": ""
+        },
+        "interval": 1000000000,
+        "timeout": 2000000000,
+        "successThreshold": 1,
+        "failureThreshold": 3
+      },
+      "stop": {
+        "gracePeriod": 5000000000
+      },
+      "restart": {
+        "mode": "never",
+        "maxRestarts": 0,
+        "backoff": 0
+      },
+      "digest": ""
+    }
+  ]
+}

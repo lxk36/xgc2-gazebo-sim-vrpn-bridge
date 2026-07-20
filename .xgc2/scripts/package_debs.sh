@@ -61,6 +61,9 @@ copy_path() {
 copy_path "${PREFIX_ROOT}/share/${ROS_PACKAGE}"
 copy_path "${PREFIX_ROOT}/lib/${ROS_PACKAGE}"
 copy_path "${PREFIX_ROOT}/include/${ROS_PACKAGE}"
+install -D -m 0644 \
+  "${REPO_ROOT}/process-definitions/xgc2-gazebo-sim-vrpn-bridge.json" \
+  "${PKG_ROOT}/usr/share/xgc2/process-definitions/xgc2-gazebo-sim-vrpn-bridge.json"
 
 cat > "${PKG_ROOT}/DEBIAN/control" <<EOF
 Package: ${PACKAGE}

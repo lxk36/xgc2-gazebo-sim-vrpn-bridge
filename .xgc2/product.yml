@@ -39,3 +39,6 @@ ownership:
   - /opt/ros/noetic/share/gazebo_sim_vrpn_bridge
   - /opt/ros/noetic/include/gazebo_sim_vrpn_bridge
   - /opt/ros/noetic/lib/gazebo_sim_vrpn_bridge
+release:
+  dependency_policy:
+    libxgc2-math-dev: rebuild

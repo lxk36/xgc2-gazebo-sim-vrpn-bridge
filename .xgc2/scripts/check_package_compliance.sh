@@ -26,6 +26,7 @@ required_files=(
   CMakeLists.txt
   README.md
   package.xml
+  process-definitions/xgc2-gazebo-sim-vrpn-bridge.json
 )
 
 for file in "${required_files[@]}"; do
