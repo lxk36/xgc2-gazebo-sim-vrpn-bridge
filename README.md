@@ -17,7 +17,6 @@ catkin_make
 
 ```bash
 roslaunch gazebo_sim_vrpn_bridge vrpn_server.launch auto_track_known_models:=true
-roslaunch gazebo_sim_vrpn_bridge vrpn_client.launch trackers:=[uav1]
 ```
 
 ## Delay Simulation

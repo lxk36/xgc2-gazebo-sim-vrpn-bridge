@@ -72,7 +72,7 @@ Section: misc
 Priority: optional
 Architecture: ${ARCH}
 Maintainer: XGC2 <apt@example.com>
-Depends: libxgc2-math-dev (>= 0.5.6-6~focal), ros-noetic-gazebo-msgs, ros-noetic-geometry-msgs, ros-noetic-roscpp, ros-noetic-tf2, ros-noetic-tf2-ros, ros-noetic-vrpn, ros-noetic-vrpn-client-ros
+Depends: libxgc2-math-dev (>= 0.5.6-6~focal), ros-noetic-gazebo-msgs, ros-noetic-geometry-msgs, ros-noetic-roscpp, ros-noetic-tf2, ros-noetic-tf2-ros, ros-noetic-vrpn
 Description: XGC2 Gazebo Classic model pose to VRPN tracker bridge
 EOF
 

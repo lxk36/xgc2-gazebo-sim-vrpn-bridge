@@ -44,5 +44,10 @@ grep -q "libxgc2-math-dev (>= 0.5.6-6~focal)" .xgc2/scripts/package_debs.sh
 grep -q "gazebo_sim_vrpn_bridge" package.xml
 grep -q "gazebo_vrpn_server_node" CMakeLists.txt
 grep -q "vrpn_server.launch" .xgc2/scripts/check_installed_packages.sh
+python3 - <<'PY'
+import json
+manifest = json.load(open('process-definitions/xgc2-gazebo-sim-vrpn-bridge.json'))
+assert [item['id'] for item in manifest['definitions']] == ['gazebo-vrpn-server']
+PY
 
 echo "Package compliance checks passed."

@@ -1,7 +1,7 @@
 schema: xgc2.product.v1
 id: xgc2-gazebo-sim-vrpn-bridge
 name: XGC2 Gazebo Sim VRPN Bridge
-version: 1.1.0-14
+version: 1.1.0-15
 kind: ros1-apt
 summary: Gazebo Classic model pose to VRPN tracker server bridge.
 ros:
@@ -22,7 +22,6 @@ apt:
   - ros-noetic-tf2
   - ros-noetic-tf2-ros
   - ros-noetic-vrpn
-  - ros-noetic-vrpn-client-ros
 usage:
   install: 'sudo apt update
 
@@ -30,8 +29,6 @@ usage:
 
     '
   smoke_test: 'roslaunch --files gazebo_sim_vrpn_bridge vrpn_server.launch auto_track_known_models:=true
-
-    roslaunch --files gazebo_sim_vrpn_bridge vrpn_client.launch trackers:=[uav1]
 
     '
 ownership:

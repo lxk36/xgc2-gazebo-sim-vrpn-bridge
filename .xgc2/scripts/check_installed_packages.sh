@@ -17,9 +17,10 @@ python3 -m json.tool /usr/share/xgc2/process-definitions/xgc2-gazebo-sim-vrpn-br
 
 roslaunch --files gazebo_sim_vrpn_bridge vrpn_server.launch auto_track_known_models:=true port:=3883 publish_rate:=120.0 \
   >/tmp/xgc2-vrpn-server-files.txt
-roslaunch --files gazebo_sim_vrpn_bridge vrpn_client.launch trackers:=[uav1] \
-  >/tmp/xgc2-vrpn-client-files.txt
-roslaunch --dump-params gazebo_sim_vrpn_bridge vrpn_client.launch trackers:=[uav1] \
-  | grep -F "/vrpn_client_node/broadcast_tf: false" >/dev/null
+python3 - <<'PY'
+import json
+manifest = json.load(open('/usr/share/xgc2/process-definitions/xgc2-gazebo-sim-vrpn-bridge.json'))
+assert [item['id'] for item in manifest['definitions']] == ['gazebo-vrpn-server']
+PY
 
 echo "Installed package check passed"
