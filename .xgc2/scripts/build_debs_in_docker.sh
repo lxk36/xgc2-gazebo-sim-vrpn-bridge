@@ -81,7 +81,8 @@ docker run --rm \
       ros-noetic-rospy \
       ros-noetic-tf2 \
       ros-noetic-tf2-ros \
-      ros-noetic-vrpn
+      ros-noetic-vrpn \
+      ros-noetic-vrpn-client-ros
     dpkg --compare-versions "$(dpkg-query -W -f="\${Version}" libxgc2-math-dev)" ge '0.5.6-6~focal'
 
     rm -rf /workspace/work/src /workspace/work/build /workspace/work/devel /workspace/work/install-root
