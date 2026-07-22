@@ -297,6 +297,7 @@
     {
       "id": "vrpn-client-ros1",
       "version": "1.2.0",
+      "parameterPolicyRevision": "vrpn-bridge/client-ros1/v1",
       "label": "VRPN client (ROS1)",
       "description": "ROS1 VRPN client that publishes discovered tracker poses into the ROS graph.",
       "drivers": [
