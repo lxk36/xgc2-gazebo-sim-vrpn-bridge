@@ -1,6 +1,9 @@
-# Gazebo-backed VRPN server defaults. Launch arguments can override these
-# top-level values; use this file mainly for robot-specific SE3 offsets.
+# Gazebo-backed VRPN server defaults shared by the in-process SystemPlugin and
+# the legacy standalone ROS node. Launch arguments can override top-level
+# values; use this file mainly for robot-specific SE3 offsets.
 
+# Legacy node input only. The SystemPlugin reads ModelPtr poses directly and
+# never subscribes to this topic.
 model_states_topic: /gazebo/model_states
 bind_address: ""
 port: 3883
@@ -35,6 +38,7 @@ auto_mapping:
   include_patterns:
     - "^uav[0-9]+$"
     - "^ugv[0-9]+$"
+    - "^mecanum[0-9]+$"
 
 # New manual mapping path. Keys are Gazebo model names; values are VRPN tracker
 # names. This overrides auto_mapping and keeps nonstandard Gazebo names usable.

@@ -1,10 +1,20 @@
 # XGC2 Gazebo Sim VRPN Bridge
 
-ROS Noetic Gazebo Classic model-state to VRPN tracker bridge for XGC2
-simulations.
+ROS Noetic Gazebo Classic pose-to-VRPN tracker server for XGC2 simulations.
 
 This repository contains the `gazebo_sim_vrpn_bridge` package. It can be placed
 directly under a catkin workspace `src/` directory.
+
+The primary backend is `libgazebo_sim_vrpn_system_plugin.so`, loaded directly
+by `gzserver`. It reads selected `gazebo::physics::Model` poses inside Gazebo
+and therefore does not publish, serialize, copy, or subscribe to the complete
+`/gazebo/model_states` array. A dedicated worker owns the VRPN connection,
+filtering, noise, and delay state so network work does not run on Gazebo's
+simulation update callback.
+
+The original `gazebo_vrpn_server_node` remains available as a compatibility
+fallback. Both backends use the same configuration loader and tracker server
+core.
 
 ## Build
 
@@ -13,11 +23,80 @@ source /opt/ros/noetic/setup.bash
 catkin_make
 ```
 
-## Launch
+The build produces:
+
+- `devel/lib/libgazebo_sim_vrpn_system_plugin.so`: primary in-process backend
+- `devel/lib/gazebo_sim_vrpn_bridge/gazebo_vrpn_server_node`: legacy ROS
+  process backend
+
+## In-process launch
+
+Load the configuration before creating the Gazebo world. The plugin reads the
+same `/gazebo_vrpn_server` parameter namespace that the legacy node reads:
+
+```bash
+source /opt/ros/noetic/setup.bash
+source /path/to/catkin_ws/devel/setup.bash
+rosparam load \
+  "$(rospack find gazebo_sim_vrpn_bridge)/config/vrpn_server.yaml" \
+  /gazebo_vrpn_server
+rosparam set /gazebo_vrpn_server/auto_track_known_models true
+gzserver --verbose \
+  -s libgazebo_ros_paths_plugin.so \
+  -s libgazebo_ros_api_plugin.so \
+  -s libgazebo_sim_vrpn_system_plugin.so \
+  /absolute/path/to/world.world
+```
+
+`libgazebo_ros_api_plugin.so` must load before the VRPN SystemPlugin. The
+in-process backend is hosted by the `/gazebo` process and does not create a
+`/gazebo_vrpn_server` ROS node. That name is only its configuration namespace.
+
+The XGC `gazebo-server` process definition performs this parameter load and
+plugin ordering automatically. Its readiness requires both Gazebo `/clock` and
+the configured VRPN TCP listener; the default ROS basic-services workflow does
+not start a separate `gazebo-vrpn-server` process.
+
+## Legacy fallback
+
+Existing launch files remain valid:
 
 ```bash
 roslaunch gazebo_sim_vrpn_bridge vrpn_server.launch auto_track_known_models:=true
 ```
+
+This backend still subscribes to `model_states_topic` (normally
+`/gazebo/model_states`). The parameter is ignored by the in-process backend.
+
+Without an explicit mapping or include pattern, automatic tracking recognizes
+only the canonical numbered model names `uavN`, `ugvN`, and `mecanumN`.
+
+## Compatibility and quality checks
+
+The in-process regression test protects the public behavior rather than forcing
+sample-for-sample equality with the legacy transport. It covers automatic and
+manual mapping, body-to-tracker extrinsics, pose/twist/acceleration reports,
+monotonic timestamps, a minimum output-rate floor, pause, simulation reset, and
+dynamic model creation/deletion/recreation. It also verifies that the backend
+has no `/gazebo/model_states` subscriber and no standalone server node. The
+legacy protocol, delay, mapping, noise, and identity tests remain enabled.
+
+For an observational A/B run, start one `vrpn_client_ros` instance for each
+backend under different namespaces and run:
+
+```bash
+rosrun gazebo_sim_vrpn_bridge compare_vrpn_backends.py \
+  --legacy-namespace /legacy_vrpn_client \
+  --plugin-namespace /plugin_vrpn_client \
+  --trackers uav1,ugv1 \
+  --duration 15 \
+  --output /tmp/vrpn-backend-comparison.json
+```
+
+This reports rate, receive-period jitter, timestamp validity, and paired
+pose/twist/acceleration differences. It has no acceptance thresholds, is not
+registered as a test, and deliberately does not fail when the plugin is faster
+or produces better timing quality.
 
 ## Delay Simulation
 

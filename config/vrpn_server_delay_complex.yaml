@@ -57,6 +57,7 @@ auto_mapping:
   include_patterns:
     - "^uav[0-9]+$"
     - "^ugv[0-9]+$"
+    - "^mecanum[0-9]+$"
 
 manual_mapping: {}
 

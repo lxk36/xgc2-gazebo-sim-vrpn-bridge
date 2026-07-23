@@ -11,15 +11,18 @@ from geometry_msgs.msg import Pose, PoseStamped, Twist
 
 class GazeboSimVrpnAutoMappingOverrideE2ETest(unittest.TestCase):
     def setUp(self):
-        self.received = []
+        self.received = {"uav1": [], "mecanum1": []}
         self.publisher = rospy.Publisher(
             "/test/auto_mapping/model_states", ModelStates, queue_size=10
         )
-        self.subscriber = rospy.Subscriber(
-            "/auto_mapping_client/vrpn_client_node/uav1/pose",
-            PoseStamped,
-            self.received.append,
-        )
+        self.subscribers = [
+            rospy.Subscriber(
+                "/auto_mapping_client/vrpn_client_node/{}/pose".format(model_name),
+                PoseStamped,
+                self.received[model_name].append,
+            )
+            for model_name in self.received
+        ]
 
     @staticmethod
     def model_states():
@@ -30,25 +33,46 @@ class GazeboSimVrpnAutoMappingOverrideE2ETest(unittest.TestCase):
         pose.orientation.w = 1.0
 
         message = ModelStates()
-        message.name = ["uav1"]
-        message.pose = [pose]
-        message.twist = [Twist()]
+        mecanum_pose = Pose()
+        mecanum_pose.position.x = -2.0
+        mecanum_pose.position.y = 0.25
+        mecanum_pose.position.z = 0.1
+        mecanum_pose.orientation.w = 1.0
+
+        message.name = ["uav1", "mecanum1"]
+        message.pose = [pose, mecanum_pose]
+        message.twist = [Twist(), Twist()]
         return message
 
     def test_explicit_private_parameter_overrides_yaml_auto_mapping(self):
         deadline = time.monotonic() + 15.0
         message = self.model_states()
         rate = rospy.Rate(120.0)
-        while time.monotonic() < deadline and not self.received and not rospy.is_shutdown():
+        while (
+            time.monotonic() < deadline
+            and not all(self.received.values())
+            and not rospy.is_shutdown()
+        ):
             self.publisher.publish(message)
             rate.sleep()
 
-        self.assertTrue(self.received, "explicit auto-track override did not export uav1")
-        latest = self.received[-1]
-        self.assertAlmostEqual(latest.pose.position.x, 1.25, delta=1.0e-4)
-        self.assertAlmostEqual(latest.pose.position.y, -0.5, delta=1.0e-4)
-        self.assertAlmostEqual(latest.pose.position.z, 0.75, delta=1.0e-4)
-        self.assertEqual(latest.header.frame_id, "world")
+        self.assertTrue(self.received["uav1"], "explicit auto-track override did not export uav1")
+        self.assertTrue(
+            self.received["mecanum1"],
+            "explicit auto-track override did not export canonical mecanum1",
+        )
+
+        uav = self.received["uav1"][-1]
+        self.assertAlmostEqual(uav.pose.position.x, 1.25, delta=1.0e-4)
+        self.assertAlmostEqual(uav.pose.position.y, -0.5, delta=1.0e-4)
+        self.assertAlmostEqual(uav.pose.position.z, 0.75, delta=1.0e-4)
+        self.assertEqual(uav.header.frame_id, "world")
+
+        mecanum = self.received["mecanum1"][-1]
+        self.assertAlmostEqual(mecanum.pose.position.x, -2.0, delta=1.0e-4)
+        self.assertAlmostEqual(mecanum.pose.position.y, 0.25, delta=1.0e-4)
+        self.assertAlmostEqual(mecanum.pose.position.z, 0.1, delta=1.0e-4)
+        self.assertEqual(mecanum.header.frame_id, "world")
 
 
 if __name__ == "__main__":

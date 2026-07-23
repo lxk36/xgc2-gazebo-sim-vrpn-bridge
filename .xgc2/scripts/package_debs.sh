@@ -61,6 +61,8 @@ copy_path() {
 copy_path "${PREFIX_ROOT}/share/${ROS_PACKAGE}"
 copy_path "${PREFIX_ROOT}/lib/${ROS_PACKAGE}"
 copy_path "${PREFIX_ROOT}/include/${ROS_PACKAGE}"
+copy_path "${PREFIX_ROOT}/lib/libgazebo_sim_vrpn_server_core.so"
+copy_path "${PREFIX_ROOT}/lib/libgazebo_sim_vrpn_system_plugin.so"
 install -D -m 0644 \
   "${REPO_ROOT}/process-definitions/xgc2-gazebo-sim-vrpn-bridge.json" \
   "${PKG_ROOT}/usr/share/xgc2/process-definitions/xgc2-gazebo-sim-vrpn-bridge.json"
@@ -72,8 +74,8 @@ Section: misc
 Priority: optional
 Architecture: ${ARCH}
 Maintainer: XGC2 <apt@example.com>
-Depends: libxgc2-math-dev (>= 0.5.6-6~focal), ros-noetic-gazebo-msgs, ros-noetic-geometry-msgs, ros-noetic-roscpp, ros-noetic-tf2, ros-noetic-tf2-ros, ros-noetic-vrpn
-Description: XGC2 Gazebo Classic model pose to VRPN tracker bridge
+Depends: libxgc2-math-dev (>= 0.5.6-6~focal), ros-noetic-gazebo-ros, ros-noetic-gazebo-msgs, ros-noetic-geometry-msgs, ros-noetic-roscpp, ros-noetic-tf2, ros-noetic-tf2-ros, ros-noetic-vrpn
+Description: XGC2 in-process Gazebo Classic pose to VRPN tracker server
 EOF
 
 printf '%s package\n' "${PACKAGE}" > "${PKG_ROOT}/usr/share/doc/${PACKAGE}/README"

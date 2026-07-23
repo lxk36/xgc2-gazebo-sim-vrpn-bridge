@@ -10,6 +10,7 @@
     <param name="scan_interval" value="0.02"/>
     <param name="stale_timeout" value="2.0"/>
     <param name="auto_track_known_models" value="true"/>
+    <rosparam param="auto_mapping/include_patterns">[]</rosparam>
     <rosparam param="mocap_noise">
       enabled: false
       position_stddev_xyz: [0.0, 0.0, 0.0]
@@ -31,7 +32,7 @@
         use_server_time: false
         broadcast_tf: false
         refresh_tracker_frequency: 0.0
-        trackers: [uav1]
+        trackers: [uav1, mecanum1]
       </rosparam>
     </node>
   </group>

@@ -1,0 +1,49 @@
+<launch>
+  <rosparam command="load"
+            file="$(find gazebo_sim_vrpn_bridge)/config/vrpn_server.yaml"
+            ns="gazebo_vrpn_server"/>
+  <param name="/gazebo_vrpn_server/bind_address" value="127.0.0.1"/>
+  <param name="/gazebo_vrpn_server/port" value="3993"/>
+  <param name="/gazebo_vrpn_server/publish_rate" value="120.0"/>
+  <param name="/gazebo_vrpn_server/scan_interval" value="0.05"/>
+  <param name="/gazebo_vrpn_server/stale_timeout" value="0.5"/>
+  <param name="/gazebo_vrpn_server/auto_track_known_models" value="true"/>
+  <param name="/gazebo_vrpn_server/mocap_noise/enabled" value="false"/>
+  <rosparam param="/gazebo_vrpn_server/manual_mapping">
+    manual_source: ugv9
+  </rosparam>
+  <rosparam param="/gazebo_vrpn_server/extrinsics">
+    uav1:
+      translation: [0.1, -0.2, 0.3]
+      rotation_rpy: [0.0, 0.0, 0.0]
+  </rosparam>
+
+  <node pkg="gazebo_ros"
+        type="gzserver"
+        name="gazebo"
+        required="true"
+        output="screen"
+        args="--verbose -s libgazebo_sim_vrpn_system_plugin.so $(find gazebo_sim_vrpn_bridge)/test/vrpn_system_plugin.world">
+    <env name="GAZEBO_MASTER_URI" value="http://127.0.0.1:11455"/>
+    <env name="GAZEBO_MODEL_DATABASE_URI" value=""/>
+  </node>
+
+  <node pkg="vrpn_client_ros"
+        type="vrpn_client_node"
+        name="plugin_vrpn_client"
+        output="screen">
+    <param name="server" value="127.0.0.1"/>
+    <param name="port" value="3993"/>
+    <param name="update_frequency" value="100.0"/>
+    <param name="frame_id" value="world"/>
+    <param name="use_server_time" value="false"/>
+    <param name="broadcast_tf" value="false"/>
+    <param name="refresh_tracker_frequency" value="0.0"/>
+    <rosparam param="trackers">[uav1, ugv9, mecanum2]</rosparam>
+  </node>
+
+  <test pkg="gazebo_sim_vrpn_bridge"
+        type="vrpn_system_plugin_e2e.py"
+        test-name="gazebo_sim_vrpn_system_plugin_e2e"
+        time-limit="60"/>
+</launch>

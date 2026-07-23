@@ -3,7 +3,7 @@
   "definitions": [
     {
       "id": "gazebo-vrpn-server",
-      "version": "2.2.0",
+      "version": "2.3.0",
       "label": "Gazebo VRPN server",
       "description": "Direct Gazebo-backed VRPN tracking server; no roslaunch wrapper.",
       "drivers": [
@@ -167,28 +167,9 @@
         "failureThreshold": 3
       },
       "liveness": {
-        "kind": "exec",
-        "command": {
-          "executable": "/opt/ros/noetic/bin/rosnode",
-          "args": [
-            "info",
-            "/gazebo_vrpn_server"
-          ],
-          "env": {
-            "CMAKE_PREFIX_PATH": "/opt/ros/noetic",
-            "LD_LIBRARY_PATH": "/opt/ros/noetic/lib:/opt/ros/noetic/lib/x86_64-linux-gnu:/opt/ros/noetic/lib/aarch64-linux-gnu",
-            "PATH": "/opt/ros/noetic/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-            "PKG_CONFIG_PATH": "/opt/ros/noetic/lib/pkgconfig",
-            "PYTHONPATH": "/opt/ros/noetic/lib/python3/dist-packages",
-            "ROS_DISTRO": "noetic",
-            "ROS_ETC_DIR": "/opt/ros/noetic/etc/ros",
-            "ROS_MASTER_URI": "http://127.0.0.1:${rosMasterPort}",
-            "ROS_PACKAGE_PATH": "/opt/ros/noetic/share",
-            "ROS_PYTHON_VERSION": "3",
-            "ROS_ROOT": "/opt/ros/noetic/share/ros",
-            "ROS_VERSION": "1"
-          }
-        },
+        "kind": "ros1-node",
+        "address": "http://127.0.0.1:${rosMasterPort}",
+        "node": "/gazebo_vrpn_server",
         "interval": 1000000000,
         "timeout": 2000000000,
         "successThreshold": 1,
