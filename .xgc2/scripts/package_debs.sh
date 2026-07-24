@@ -64,8 +64,6 @@ copy_path "${PREFIX_ROOT}/include/${ROS_PACKAGE}"
 copy_path "${PREFIX_ROOT}/lib/libgazebo_sim_vrpn_server_core.so"
 copy_path "${PREFIX_ROOT}/lib/libgazebo_sim_vrpn_system_plugin.so"
 install -D -m 0644 \
-  "${REPO_ROOT}/process-definitions/xgc2-gazebo-sim-vrpn-bridge.json" \
-  "${PKG_ROOT}/usr/share/xgc2/process-definitions/xgc2-gazebo-sim-vrpn-bridge.json"
 
 cat > "${PKG_ROOT}/DEBIAN/control" <<EOF
 Package: ${PACKAGE}

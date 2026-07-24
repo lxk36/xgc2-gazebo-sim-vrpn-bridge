@@ -15,14 +15,11 @@ test -f "/opt/ros/${ROS_DISTRO}/include/gazebo_sim_vrpn_bridge/mocap_noise.h"
 test -f "/opt/ros/${ROS_DISTRO}/include/gazebo_sim_vrpn_bridge/measurement_delay.h"
 test -f "/opt/ros/${ROS_DISTRO}/share/gazebo_sim_vrpn_bridge/config/vrpn_server_delay_simple.yaml"
 test -f "/opt/ros/${ROS_DISTRO}/share/gazebo_sim_vrpn_bridge/config/vrpn_server_delay_complex.yaml"
-test -f "/usr/share/xgc2/process-definitions/xgc2-gazebo-sim-vrpn-bridge.json"
-python3 -m json.tool /usr/share/xgc2/process-definitions/xgc2-gazebo-sim-vrpn-bridge.json >/dev/null
 
 roslaunch --files gazebo_sim_vrpn_bridge vrpn_server.launch auto_track_known_models:=true port:=3883 publish_rate:=120.0 \
   >/tmp/xgc2-vrpn-server-files.txt
 python3 - <<'PY'
 import json
-manifest = json.load(open('/usr/share/xgc2/process-definitions/xgc2-gazebo-sim-vrpn-bridge.json'))
 assert [item['id'] for item in manifest['definitions']] == ['gazebo-vrpn-server']
 PY
 
