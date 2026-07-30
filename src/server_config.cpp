@@ -474,22 +474,25 @@ std::string ServerConfig::trackerNameForGazeboModel(const std::string& gazebo_mo
         return configured->second;
     }
 
+    // Automatic canonical discovery and legacy pattern matching are two
+    // mutually exclusive operator modes. The panel retains hidden defaults
+    // for the inactive mode, so auto mode must never consult tracker_patterns.
+    if (auto_track_known_models) {
+        if (matchesAutoPattern(*this, name)) {
+            return name;
+        }
+        if (auto_include_patterns.empty() && isCanonicalAutoTrackedModelName(name)) {
+            return name;
+        }
+        return {};
+    }
+
     const auto matched_pattern =
         std::find_if(tracker_patterns.begin(), tracker_patterns.end(), [this, &name](const std::string& pattern) {
             return matchesPattern(*this, name, pattern);
         });
     if (matched_pattern != tracker_patterns.end()) {
         return *matched_pattern;
-    }
-
-    if (!auto_track_known_models) {
-        return {};
-    }
-    if (matchesAutoPattern(*this, name)) {
-        return name;
-    }
-    if (auto_include_patterns.empty() && isCanonicalAutoTrackedModelName(name)) {
-        return name;
     }
     return {};
 }
