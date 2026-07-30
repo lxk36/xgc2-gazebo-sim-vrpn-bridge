@@ -94,6 +94,8 @@ docker run --rm \
 
     cd /workspace/work
     source /opt/ros/noetic/setup.bash
+    catkin_make
+    source /workspace/work/devel/setup.bash
     catkin_make run_tests_gazebo_sim_vrpn_bridge
     catkin_test_results
 
