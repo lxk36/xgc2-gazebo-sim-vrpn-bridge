@@ -66,6 +66,7 @@ docker run --rm \
       dpkg-dev \
       fakeroot \
       file \
+      gazebo11 \
       git \
       libgazebo11-dev \
       libxgc2-math-dev \
@@ -73,6 +74,7 @@ docker run --rm \
       python3-nose \
       rsync \
       ros-noetic-gazebo-msgs \
+      ros-noetic-gazebo-ros \
       ros-noetic-geometry-msgs \
       ros-noetic-roscpp \
       ros-noetic-roslaunch \
