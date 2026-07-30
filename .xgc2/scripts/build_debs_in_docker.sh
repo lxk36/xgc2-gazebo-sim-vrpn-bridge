@@ -67,6 +67,7 @@ docker run --rm \
       fakeroot \
       file \
       git \
+      libgazebo11-dev \
       libxgc2-math-dev \
       netbase \
       python3-nose \

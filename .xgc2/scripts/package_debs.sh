@@ -63,7 +63,6 @@ copy_path "${PREFIX_ROOT}/lib/${ROS_PACKAGE}"
 copy_path "${PREFIX_ROOT}/include/${ROS_PACKAGE}"
 copy_path "${PREFIX_ROOT}/lib/libgazebo_sim_vrpn_server_core.so"
 copy_path "${PREFIX_ROOT}/lib/libgazebo_sim_vrpn_system_plugin.so"
-install -D -m 0644 \
 
 cat > "${PKG_ROOT}/DEBIAN/control" <<EOF
 Package: ${PACKAGE}

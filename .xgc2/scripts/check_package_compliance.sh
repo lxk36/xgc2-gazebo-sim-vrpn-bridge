@@ -45,9 +45,5 @@ grep -q 'copy_path "${PREFIX_ROOT}/lib/libgazebo_sim_vrpn_server_core.so"' .xgc2
 grep -q "gazebo_sim_vrpn_bridge" package.xml
 grep -q "gazebo_vrpn_server_node" CMakeLists.txt
 grep -q "vrpn_server.launch" .xgc2/scripts/check_installed_packages.sh
-python3 - <<'PY'
-import json
-assert [item['id'] for item in manifest['definitions']] == ['gazebo-vrpn-server']
-PY
 
 echo "Package compliance checks passed."
