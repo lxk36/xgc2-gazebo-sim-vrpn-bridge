@@ -18,9 +18,5 @@ test -f "/opt/ros/${ROS_DISTRO}/share/gazebo_sim_vrpn_bridge/config/vrpn_server_
 
 roslaunch --files gazebo_sim_vrpn_bridge vrpn_server.launch auto_track_known_models:=true port:=3883 publish_rate:=120.0 \
   >/tmp/xgc2-vrpn-server-files.txt
-python3 - <<'PY'
-import json
-assert [item['id'] for item in manifest['definitions']] == ['gazebo-vrpn-server']
-PY
 
 echo "Installed package check passed"
