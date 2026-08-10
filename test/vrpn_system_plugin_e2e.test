@@ -36,7 +36,8 @@
     <param name="port" value="3993"/>
     <param name="update_frequency" value="100.0"/>
     <param name="frame_id" value="world"/>
-    <param name="use_server_time" value="false"/>
+    <!-- The SystemPlugin's VRPN timeval is Gazebo World::SimTime. -->
+    <param name="use_server_time" value="true"/>
     <param name="broadcast_tf" value="false"/>
     <param name="refresh_tracker_frequency" value="0.0"/>
     <rosparam param="trackers">[uav1, ugv9, mecanum2]</rosparam>

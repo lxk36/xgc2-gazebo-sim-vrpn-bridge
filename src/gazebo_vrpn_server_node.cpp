@@ -80,6 +80,7 @@ class GazeboVrpnServerNode {
         ModelStateSnapshot snapshot;
         snapshot.sample_time_s = sampleTimeSeconds(capture_wall_time);
         snapshot.capture_wall_time_s = capture_wall_time.toSec();
+        snapshot.wire_timestamp_source = WireTimestampSource::WallTime;
         snapshot.models.reserve(message->name.size());
         for (std::size_t index = 0; index < message->name.size(); ++index) {
             snapshot.models.push_back(ModelPoseSample{message->name[index], message->pose[index]});

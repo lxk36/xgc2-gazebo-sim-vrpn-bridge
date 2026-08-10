@@ -124,6 +124,7 @@ class GazeboVrpnSystemPlugin final : public gazebo::SystemPlugin {
             ModelStateSnapshot snapshot;
             snapshot.sample_time_s = world_->SimTime().Double();
             snapshot.capture_wall_time_s = capture_wall_time_s;
+            snapshot.wire_timestamp_source = WireTimestampSource::SimulationTime;
             snapshot.models.reserve(tracked_models_.size());
             for (const TrackedModelHandle& tracked : tracked_models_) {
                 if (!tracked.model) {

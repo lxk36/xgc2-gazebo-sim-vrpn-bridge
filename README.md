@@ -57,6 +57,33 @@ plugin ordering automatically. Its readiness requires both Gazebo `/clock` and
 the configured VRPN TCP listener; the default ROS basic-services workflow does
 not start a separate `gazebo-vrpn-server` process.
 
+## VRPN wire timestamps
+
+The in-process SystemPlugin explicitly encodes `World::SimTime()` in every VRPN
+pose, velocity, and acceleration report. A stock `vrpn_client_ros` consumer can
+therefore set `use_server_time: true` and receive headers in the same simulation
+clock domain as Gazebo `/clock`. While Gazebo is paused, repeated reports keep
+the last simulation timestamp; a simulation reset is allowed to move the report
+timestamp backwards along with `/clock`.
+
+Capture and publish wall-clock values are still retained internally for
+capture-rate limiting, stale-source diagnostics, and bounded measurement-delay
+history selection. The delay `timestamp_policy` remains orthogonal: `send_time`
+uses the latest simulation time and `sample_time` uses the selected historical
+sample's simulation time.
+
+The legacy `/gazebo/model_states` process keeps wall-clock VRPN timestamps for
+backward compatibility. `vrpn_client.launch` also keeps
+`use_server_time:=false` as its cross-backend default; callers using the
+SystemPlugin opt into the corrected simulation stamps with
+`use_server_time:=true`.
+
+Hybrid production uses the installed `config/vrpn_server_hybrid.yaml`. It
+fixes `delay.timestamp_policy` to `sample_time`, including while delay is
+disabled. If a later frozen profile enables measurement delay, the VRPN header
+therefore remains the timestamp of the selected pose sample rather than the
+time at which the delayed report was sent.
+
 ## Legacy fallback
 
 Existing launch files remain valid:
@@ -150,5 +177,7 @@ delay:
 ```
 
 The server publishes delayed historical tracker samples from bounded per-tracker
-ring buffers. `send_time` keeps VRPN report timestamps at the publish time;
-`sample_time` stamps reports with the delayed sample receive time.
+ring buffers. `send_time` keeps VRPN report timestamps at the latest time in the
+selected wire clock domain; `sample_time` stamps reports with the selected
+historical sample's time in that same domain. Delay history selection itself is
+always based on wall time.

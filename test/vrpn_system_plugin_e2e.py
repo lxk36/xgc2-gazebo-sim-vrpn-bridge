@@ -10,6 +10,7 @@ import rospy
 import rostest
 from gazebo_msgs.srv import DeleteModel, SpawnModel
 from geometry_msgs.msg import Pose, PoseStamped, TwistStamped
+from rosgraph_msgs.msg import Clock
 from std_srvs.srv import Empty
 
 
@@ -18,7 +19,18 @@ class GazeboVrpnSystemPluginE2ETest(unittest.TestCase):
         self.pose_messages = {"uav1": [], "ugv9": [], "mecanum2": []}
         self.twist_messages = {"uav1": [], "ugv9": []}
         self.accel_messages = {"uav1": [], "ugv9": []}
+        self.clock_messages = []
         self.subscribers = []
+
+        self.subscribers.append(
+            rospy.Subscriber(
+                "/clock",
+                Clock,
+                lambda message: self.clock_messages.append(
+                    (time.monotonic(), message.clock.to_sec())
+                ),
+            )
+        )
 
         for tracker in self.pose_messages:
             self.subscribers.append(
@@ -137,6 +149,29 @@ class GazeboVrpnSystemPluginE2ETest(unittest.TestCase):
             all(right >= left for left, right in zip(stamps, stamps[1:]))
         )
 
+    def assert_simulation_source_timestamps(self, tracker):
+        self.assertTrue(self.clock_messages, "Gazebo /clock did not publish")
+        pose_records = self.pose_messages[tracker][-10:]
+        self.assertGreaterEqual(len(pose_records), 5)
+
+        for receive_time, message in pose_records:
+            closest_clock = min(
+                self.clock_messages,
+                key=lambda record: abs(record[0] - receive_time),
+            )[1]
+            self.assertAlmostEqual(
+                message.header.stamp.to_sec(),
+                closest_clock,
+                delta=0.25,
+                msg="VRPN server timestamp diverged from Gazebo simulation time",
+            )
+
+        # A wall-clock timeval would be near the Unix epoch time instead of the
+        # small elapsed time in this test world.
+        latest_stamp = pose_records[-1][1].header.stamp.to_sec()
+        self.assertGreater(latest_stamp, 0.0)
+        self.assertGreater(abs(latest_stamp - time.time()), 3600.0)
+
     def assert_no_model_states_hot_path(self):
         _, subscribers, _ = rosgraph.Master(rospy.get_name()).getSystemState()
         model_state_subscribers = dict(subscribers).get("/gazebo/model_states", [])
@@ -186,26 +221,41 @@ class GazeboVrpnSystemPluginE2ETest(unittest.TestCase):
         for tracker in ("uav1", "ugv9"):
             self.assert_stationary_derivatives(tracker)
             self.assert_stream_quality_floor(tracker)
+            self.assert_simulation_source_timestamps(tracker)
         self.assert_no_model_states_hot_path()
 
         # Pausing Gazebo must not tear down the VRPN server. Like the original
         # process, it repeats the last valid sample while simulation is paused.
-        before_pause = len(self.pose_messages["uav1"])
         self.pause()
-        time.sleep(0.35)
+        time.sleep(0.1)
+        before_pause = len(self.pose_messages["uav1"])
+        time.sleep(0.25)
         after_pause = len(self.pose_messages["uav1"])
-        self.assertGreater(after_pause - before_pause, 10)
+        self.assertGreater(after_pause - before_pause, 5)
+        paused_stamps = [
+            record[1].header.stamp.to_sec()
+            for record in self.pose_messages["uav1"][before_pause:after_pause]
+        ]
+        self.assertAlmostEqual(max(paused_stamps), min(paused_stamps), delta=1.0e-6)
         self.assert_pose("uav1", (1.1, 1.8, 3.3))
         self.unpause()
 
         # A simulation-time rollback resets derivative history without
         # interrupting tracker output.
         before_reset = len(self.pose_messages["uav1"])
+        before_reset_stamp = self.pose_messages["uav1"][-1][1].header.stamp.to_sec()
         self.reset_simulation()
         self.assertTrue(
             self.wait_until(
-                lambda: len(self.pose_messages["uav1"]) >= before_reset + 10
+                lambda: any(
+                    record[1].header.stamp.to_sec() < before_reset_stamp - 0.05
+                    for record in self.pose_messages["uav1"][before_reset:]
+                )
             ),
+            "VRPN timestamp did not follow the Gazebo simulation-time reset",
+        )
+        self.assertTrue(
+            self.wait_until(lambda: len(self.pose_messages["uav1"]) >= before_reset + 10),
             "tracker stream did not recover after simulation reset",
         )
         self.assert_stationary_derivatives("uav1")

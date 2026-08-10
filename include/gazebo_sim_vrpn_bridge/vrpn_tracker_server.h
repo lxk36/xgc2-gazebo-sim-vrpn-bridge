@@ -8,6 +8,7 @@
 #include <geometry_msgs/Pose.h>
 
 #include "gazebo_sim_vrpn_bridge/server_config.h"
+#include "gazebo_sim_vrpn_bridge/wire_timestamp.h"
 
 namespace gazebo_sim_vrpn_bridge {
 
@@ -17,10 +18,12 @@ struct ModelPoseSample {
 };
 
 struct ModelStateSnapshot {
-    // Simulation time drives derivatives. Capture wall time drives staleness,
-    // the bounded delay history, and the VRPN wire timestamp policy.
+    // Sample time drives derivatives and supplies the VRPN wire timestamp for
+    // a simulation-time source. Capture wall time remains authoritative for
+    // staleness and bounded delay-history selection.
     double sample_time_s{0.0};
     double capture_wall_time_s{0.0};
+    WireTimestampSource wire_timestamp_source{WireTimestampSource::WallTime};
     std::vector<ModelPoseSample> models;
 };
 

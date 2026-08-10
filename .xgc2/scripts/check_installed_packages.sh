@@ -13,8 +13,12 @@ test -f "/opt/ros/${ROS_DISTRO}/lib/libgazebo_sim_vrpn_server_core.so"
 test -f "/opt/ros/${ROS_DISTRO}/lib/libgazebo_sim_vrpn_system_plugin.so"
 test -f "/opt/ros/${ROS_DISTRO}/include/gazebo_sim_vrpn_bridge/mocap_noise.h"
 test -f "/opt/ros/${ROS_DISTRO}/include/gazebo_sim_vrpn_bridge/measurement_delay.h"
+test -f "/opt/ros/${ROS_DISTRO}/include/gazebo_sim_vrpn_bridge/wire_timestamp.h"
 test -f "/opt/ros/${ROS_DISTRO}/share/gazebo_sim_vrpn_bridge/config/vrpn_server_delay_simple.yaml"
 test -f "/opt/ros/${ROS_DISTRO}/share/gazebo_sim_vrpn_bridge/config/vrpn_server_delay_complex.yaml"
+test -f "/opt/ros/${ROS_DISTRO}/share/gazebo_sim_vrpn_bridge/config/vrpn_server_hybrid.yaml"
+grep -A3 '^delay:' "/opt/ros/${ROS_DISTRO}/share/gazebo_sim_vrpn_bridge/config/vrpn_server_hybrid.yaml" \
+  | grep -q 'timestamp_policy: sample_time'
 
 roslaunch --files gazebo_sim_vrpn_bridge vrpn_server.launch auto_track_known_models:=true port:=3883 publish_rate:=120.0 \
   >/tmp/xgc2-vrpn-server-files.txt

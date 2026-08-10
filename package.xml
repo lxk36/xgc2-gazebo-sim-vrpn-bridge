@@ -25,6 +25,7 @@
   <test_depend>rostest</test_depend>
   <test_depend>rosunit</test_depend>
   <test_depend>rospy</test_depend>
+  <test_depend>rosgraph_msgs</test_depend>
   <test_depend>std_srvs</test_depend>
   <test_depend>python3-nose</test_depend>
   <test_depend>vrpn_client_ros</test_depend>

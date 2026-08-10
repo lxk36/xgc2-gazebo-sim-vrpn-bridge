@@ -18,6 +18,7 @@ namespace {
 TrackerSample sampleAt(double time_s) {
     TrackerSample sample;
     sample.wall_time_s = time_s;
+    sample.source_time_s = time_s;
     sample.pose.orientation.w = 1.0;
     return sample;
 }
@@ -285,10 +286,12 @@ TEST(TrackerSampleHistory, CapacityIsBoundedAndNearestSampleWins) {
 }
 
 TEST(MeasurementDelay, TimestampPolicySelectsSendOrSampleTime) {
-    const TrackerSample sample = sampleAt(12.5);
+    TrackerSample sample = sampleAt(1700000000.25);
+    sample.source_time_s = 12.5;
 
     EXPECT_DOUBLE_EQ(timestampSecondsForPolicy(DelayTimestampPolicy::SendTime, 20.0, sample), 20.0);
     EXPECT_DOUBLE_EQ(timestampSecondsForPolicy(DelayTimestampPolicy::SampleTime, 20.0, sample), 12.5);
+    EXPECT_DOUBLE_EQ(sample.wall_time_s, 1700000000.25);
 }
 
 TEST(MeasurementDelay, ValidationRejectsInvalidScalarConfig) {

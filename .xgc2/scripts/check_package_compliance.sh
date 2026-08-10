@@ -45,5 +45,8 @@ grep -q 'copy_path "${PREFIX_ROOT}/lib/libgazebo_sim_vrpn_server_core.so"' .xgc2
 grep -q "gazebo_sim_vrpn_bridge" package.xml
 grep -q "gazebo_vrpn_server_node" CMakeLists.txt
 grep -q "vrpn_server.launch" .xgc2/scripts/check_installed_packages.sh
+grep -q "wire_timestamp.h" .xgc2/scripts/check_installed_packages.sh
+grep -q "vrpn_server_hybrid.yaml" .xgc2/scripts/check_installed_packages.sh
+grep -A3 '^delay:' config/vrpn_server_hybrid.yaml | grep -q 'timestamp_policy: sample_time'
 
 echo "Package compliance checks passed."

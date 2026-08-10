@@ -46,7 +46,10 @@ struct MeasurementDelayConfig {
 };
 
 struct TrackerSample {
+    // Wall time indexes the delay history. Source time is the timestamp in the
+    // input adapter's selected wire clock domain (wall or simulation).
     double wall_time_s{0.0};
+    double source_time_s{0.0};
     geometry_msgs::Pose pose;
     tf2::Vector3 linear_velocity{0.0, 0.0, 0.0};
     tf2::Vector3 angular_velocity{0.0, 0.0, 0.0};
@@ -57,8 +60,9 @@ struct TrackerSample {
     double report_interval_s{0.0};
 };
 
-inline double timestampSecondsForPolicy(DelayTimestampPolicy policy, double send_time_s, const TrackerSample& sample) {
-    return policy == DelayTimestampPolicy::SampleTime ? sample.wall_time_s : send_time_s;
+inline double timestampSecondsForPolicy(DelayTimestampPolicy policy, double send_source_time_s,
+                                        const TrackerSample& sample) {
+    return policy == DelayTimestampPolicy::SampleTime ? sample.source_time_s : send_source_time_s;
 }
 
 class TrackerSampleHistory {

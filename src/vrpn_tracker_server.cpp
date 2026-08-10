@@ -84,12 +84,12 @@ void vectorRpyToQuaternion(const tf2::Vector3& rpy, vrpn_float64 quaternion[4]) 
     quaternion[3] = value.w();
 }
 
-struct timeval wallSecondsToTimeval(double wall_time_s) {
-    wall_time_s = std::max(wall_time_s, 0.0);
-    const double whole_seconds = std::floor(wall_time_s);
+struct timeval secondsToTimeval(double time_s) {
+    time_s = std::max(time_s, 0.0);
+    const double whole_seconds = std::floor(time_s);
     struct timeval timestamp {};
     timestamp.tv_sec = static_cast<time_t>(whole_seconds);
-    timestamp.tv_usec = static_cast<suseconds_t>(std::round((wall_time_s - whole_seconds) * 1000000.0));
+    timestamp.tv_usec = static_cast<suseconds_t>(std::round((time_s - whole_seconds) * 1000000.0));
     if (timestamp.tv_usec >= 1000000) {
         ++timestamp.tv_sec;
         timestamp.tv_usec -= 1000000;
@@ -144,6 +144,19 @@ class VrpnTrackerServer::Impl {
     }
 
     void processSnapshot(const ModelStateSnapshot& snapshot) {
+        if (!have_wire_timestamp_source_) {
+            ROS_INFO("[GazeboVrpnServer] VRPN wire timestamp source is %s",
+                     wireTimestampSourceName(snapshot.wire_timestamp_source));
+        } else if (snapshot.wire_timestamp_source != wire_timestamp_source_) {
+            resetMeasurementState();
+            ROS_WARN("[GazeboVrpnServer] VRPN wire timestamp source changed from %s to %s; "
+                     "measurement state was reset",
+                     wireTimestampSourceName(wire_timestamp_source_),
+                     wireTimestampSourceName(snapshot.wire_timestamp_source));
+        }
+        wire_timestamp_source_ = snapshot.wire_timestamp_source;
+        have_wire_timestamp_source_ = true;
+
         if (have_sample_time_ && snapshot.sample_time_s + kTimeEpsilon < last_sample_time_s_) {
             resetMeasurementState();
             ROS_INFO("[GazeboVrpnServer] Simulation time moved backwards; measurement state was reset");
@@ -163,7 +176,10 @@ class VrpnTrackerServer::Impl {
             if (found == tracked_models_.end()) {
                 continue;
             }
-            updateTrackedModel(found->second, sample.pose, snapshot.sample_time_s, snapshot.capture_wall_time_s);
+            const double source_time_s = timestampSecondsForSource(
+                snapshot.wire_timestamp_source, snapshot.sample_time_s, snapshot.capture_wall_time_s);
+            updateTrackedModel(found->second, sample.pose, snapshot.sample_time_s, snapshot.capture_wall_time_s,
+                               source_time_s);
         }
     }
 
@@ -187,9 +203,11 @@ class VrpnTrackerServer::Impl {
                 continue;
             }
 
+            const double send_source_time_s =
+                timestampSecondsForSource(wire_timestamp_source_, last_sample_time_s_, send_wall_time_s);
             const double timestamp_s =
-                timestampSecondsForPolicy(config_.delay.timestamp_policy, send_wall_time_s, *sample);
-            const struct timeval timestamp = wallSecondsToTimeval(timestamp_s);
+                timestampSecondsForPolicy(config_.delay.timestamp_policy, send_source_time_s, *sample);
+            const struct timeval timestamp = secondsToTimeval(timestamp_s);
             const geometry_msgs::Pose measured_pose = mocap_noise_.apply(sample->pose);
             const vrpn_float64 position[3] = {
                 measured_pose.position.x,
@@ -332,14 +350,14 @@ class VrpnTrackerServer::Impl {
     }
 
     void updateTrackedModel(TrackedModel& model, const geometry_msgs::Pose& pose, double sample_time_s,
-                            double capture_wall_time_s) {
+                            double capture_wall_time_s, double source_time_s) {
         const tf2::Transform world_body = poseToTransform(pose);
         const tf2::Transform world_tracker = world_body * model.body_to_tracker;
         updateDerivativeState(model, world_tracker, sample_time_s);
         model.latest_pose = transformToPose(world_tracker);
         model.last_model_state_wall_time_s = capture_wall_time_s;
         model.have_pose = true;
-        pushTrackerSample(model, capture_wall_time_s);
+        pushTrackerSample(model, capture_wall_time_s, source_time_s);
     }
 
     void updateDerivativeState(TrackedModel& model, const tf2::Transform& world_tracker, double sample_time_s) const {
@@ -415,9 +433,10 @@ class VrpnTrackerServer::Impl {
         }
     }
 
-    void pushTrackerSample(TrackedModel& model, double capture_wall_time_s) {
+    void pushTrackerSample(TrackedModel& model, double capture_wall_time_s, double source_time_s) {
         TrackerSample sample;
         sample.wall_time_s = capture_wall_time_s;
+        sample.source_time_s = source_time_s;
         sample.pose = model.latest_pose;
         sample.linear_velocity = model.linear_velocity;
         sample.angular_velocity = model.angular_velocity;
@@ -453,6 +472,8 @@ class VrpnTrackerServer::Impl {
     double last_scan_wall_time_s_{0.0};
     double last_sample_time_s_{0.0};
     bool have_sample_time_{false};
+    WireTimestampSource wire_timestamp_source_{WireTimestampSource::WallTime};
+    bool have_wire_timestamp_source_{false};
 };
 
 VrpnTrackerServer::VrpnTrackerServer(const ServerConfig& config) : impl_(std::make_unique<Impl>(config)) {}
