@@ -29,16 +29,6 @@ on:
         required: false
         default: ""
         type: string
-      run_cpp_quality:
-        description: Run C++ quality checks
-        required: true
-        default: false
-        type: boolean
-      run_source_tests:
-        description: Run source tests
-        required: true
-        default: false
-        type: boolean
 
 permissions:
   actions: read
@@ -79,7 +69,6 @@ jobs:
             echo "apt_overlay_url requires a dependency_set_digest" >&2
             exit 1
           fi
-
   validate-release-inputs:
     needs: prepare-contract
     runs-on: ubuntu-latest
@@ -87,6 +76,28 @@ jobs:
       version: ${{ steps.product.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+  release-checks:
+    needs: validate-release-inputs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+  build-debs:
+    needs: validate-release-inputs
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+
 
       - name: Validate expected version and source SHA
         id: product
@@ -108,13 +119,6 @@ jobs:
             exit 1
           fi
 
-  release-checks:
-    needs: validate-release-inputs
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
 
       - name: Run release checks
         run: |
@@ -130,19 +134,6 @@ jobs:
             .xgc2/scripts/run_package_tests.sh
           fi
 
-  build-debs:
-    needs: validate-release-inputs
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: amd64
-            runner: ubuntu-latest
-          - arch: arm64
-            runner: ubuntu-24.04-arm
-    runs-on: ${{ matrix.runner }}
-    steps:
-      - uses: actions/checkout@v4
 
       - name: Build and install-check deb packages
         run: |
