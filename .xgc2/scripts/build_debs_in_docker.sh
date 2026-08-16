@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
-DOCKER_IMAGE="${DOCKER_IMAGE:-ros:noetic-ros-base-focal}"
+DOCKER_IMAGE="${DOCKER_IMAGE:-ghcr.io/xgc-team/xgc2-images/xgc2-build-focal-full-noetic:1.0.0}"
 WORK_DIR="${WORK_DIR:-${REPO_ROOT}/.work/docker}"
 OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/debs}"
 INSTALL_CHECK="${INSTALL_CHECK:-true}"
@@ -49,8 +49,6 @@ docker run --rm \
     set -euo pipefail
 
     export DEBIAN_FRONTEND=noninteractive
-    apt-get update
-    apt-get install -y --no-install-recommends ca-certificates
     echo "deb [trusted=yes arch=$(dpkg --print-architecture)] https://xgc2.apt.xiaokang.ink focal main" \
       > /etc/apt/sources.list.d/xgc2.list
 
@@ -61,31 +59,7 @@ docker run --rm \
       fi
     apt-get update
     apt-get install -y --no-install-recommends \
-      build-essential \
-      cmake \
-      dpkg-dev \
-      fakeroot \
-      file \
-      gazebo11 \
-      git \
-      libgazebo11-dev \
-      libxgc2-math-dev \
-      netbase \
-      python3-nose \
-      rsync \
-      ros-noetic-gazebo-msgs \
-      ros-noetic-gazebo-ros \
-      ros-noetic-geometry-msgs \
-      ros-noetic-roscpp \
-      ros-noetic-roslaunch \
-      ros-noetic-rospack \
-      ros-noetic-rostest \
-      ros-noetic-rosunit \
-      ros-noetic-rospy \
-      ros-noetic-tf2 \
-      ros-noetic-tf2-ros \
-      ros-noetic-vrpn \
-      ros-noetic-vrpn-client-ros
+      libxgc2-math-dev
     dpkg --compare-versions "$(dpkg-query -W -f="\${Version}" libxgc2-math-dev)" ge '0.5.6-6~focal'
 
     rm -rf /workspace/work/src /workspace/work/build /workspace/work/devel /workspace/work/install-root
