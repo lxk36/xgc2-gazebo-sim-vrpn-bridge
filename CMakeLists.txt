@@ -10,8 +10,13 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 find_package(gazebo REQUIRED)
-find_package(VRPN REQUIRED)
+# ROS Noetic's VRPNConfig consumes CMake's legacy thread-probe variable while
+# resolving the server library. Modern FindThreads exposes Threads_FOUND and
+# Threads::Threads instead, so translate that successful dependency probe at
+# this third-party package boundary.
 find_package(Threads REQUIRED)
+set(CMAKE_HAVE_THREADS_LIBRARY "${Threads_FOUND}")
+find_package(VRPN REQUIRED)
 find_package(xgc2_math REQUIRED CONFIG)
 
 catkin_package(
